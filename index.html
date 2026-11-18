@@ -53,6 +53,13 @@
 // ───────── 기본 설정 ─────────
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 const BG_SCALE = 2.4;                     // 교실 그림(1536×1024)을 2.4배로 → 캐릭터가 책상보다 작아 보이게
+// 책상·교탁 자리(교실 그림 좌표 x0, y0, x1, y1). 책상 윗판부터 의자 아래까지 막아요
+const OBST = [
+  [668, 150, 882, 262],                                            // 교탁
+  [60, 268, 295, 372], [30, 380, 262, 494], [4, 506, 238, 620], [0, 650, 212, 764], [0, 796, 202, 948],          // 왼쪽 책상 줄
+  [1243, 268, 1400, 374], [1278, 382, 1490, 496], [1300, 506, 1536, 622], [1325, 650, 1536, 766], [1338, 796, 1536, 948], // 오른쪽 책상 줄
+].map(r => r.map(v => v * BG_SCALE));
+const DEBUG = /[?&]debug/.test(location.search);
 const HERO_H = 92, PAPER_H = 66;          // 세계에서의 키(픽셀)
 const BAT_TIME = 25;                      // 이 시간에 야구방망이가 바닥에 떨어져요
 const WORLD = { w: 1536 * BG_SCALE, h: 1024 * BG_SCALE };
@@ -158,7 +165,7 @@ function spawnEnemy(kind) {
   do {
     const a = Math.random() * Math.PI * 2;
     x = P.x + Math.cos(a) * r; y = P.y + Math.sin(a) * r * 0.8; tries++;
-  } while ((x < FLOOR.x0 || x > FLOOR.x1 || y < FLOOR.y0 || y > FLOOR.y1) && tries < 12);
+  } while ((x < FLOOR.x0 || x > FLOOR.x1 || y < FLOOR.y0 || y > FLOOR.y1 || blocked(x, y, 20)) && tries < 20);
   x = clamp(x, FLOOR.x0, FLOOR.x1); y = clamp(y, FLOOR.y0, FLOOR.y1);
   const m = 1 + T / 70;                         // 시간이 갈수록 단단해져요
   const base = { x, y, face: 1, hitT: 0, atkT: 0, walkT: Math.random(), kb: { x: 0, y: 0 }, lastHit: {} };
@@ -219,15 +226,19 @@ function update(dt) {
   P.moving = Math.hypot(dx, dy) > 0.05;
   P.x = clamp(P.x + dx * P.speed * dt, FLOOR.x0, FLOOR.x1);
   P.y = clamp(P.y + dy * P.speed * dt, FLOOR.y0, FLOOR.y1);
+  pushOut(P, 16);
   if (dx > 0.1) P.face = 1; else if (dx < -0.1) P.face = -1;
   if (P.moving) P.walkT += dt;
   P.inv -= dt; P.hurtT -= dt; P.atkT -= dt; P.joyT -= dt;
 
   // 아이템: 야구방망이가 바닥에 떨어져요 → 밟으면 주먹 대신 방망이
   if (!itemDone && !item && T >= BAT_TIME) {
-    const a = Math.random() * Math.PI * 2;
-    item = { x: clamp(P.x + Math.cos(a) * 380, FLOOR.x0 + 60, FLOOR.x1 - 60),
-             y: clamp(P.y + Math.sin(a) * 260, FLOOR.y0 + 60, FLOOR.y1 - 40) };
+    for (let i = 0; i < 30; i++) {
+      const a = Math.random() * Math.PI * 2;
+      item = { x: clamp(P.x + Math.cos(a) * 380, FLOOR.x0 + 60, FLOOR.x1 - 60),
+               y: clamp(P.y + Math.sin(a) * 260, FLOOR.y0 + 60, FLOOR.y1 - 40) };
+      if (!blocked(item.x, item.y, 40)) break;
+    }
     toast('🏏 야구방망이가 떨어졌어요! 주워요');
   }
   if (item && Math.hypot(P.x - item.x, P.y - item.y) < 50) {
@@ -312,6 +323,7 @@ function update(dt) {
     { const qx = e.x - P.x, qy = e.y - P.y, q = Math.hypot(qx, qy) || 1, mn = e.r + 16;
       if (q < mn) { e.x = P.x + qx / q * mn; e.y = P.y + qy / q * mn; } }
     e.x = clamp(e.x, FLOOR.x0, FLOOR.x1); e.y = clamp(e.y, FLOOR.y0, FLOOR.y1);
+    pushOut(e, e.r * 0.7);
     e.walkT += dt; e.hitT -= dt; e.atkT -= dt;
     if (d < e.r + 22) {
       e.atkT = 0.25;
@@ -423,6 +435,7 @@ function render() {
     ctx.fill(); ctx.stroke();
   }
 
+  if (DEBUG) { ctx.fillStyle = 'rgba(255,0,0,.25)'; for (const [x0, y0, x1, y1] of OBST) ctx.fillRect(x0, y0, x1 - x0, y1 - y0); }
   drawItem();
   // 그림자 + 캐릭터를 y 순서로
   const actors = enemies.map(e => ({ y: e.y, e })).concat([{ y: P.y, p: true }]);
@@ -614,6 +627,19 @@ function loop(now) {
 
 // ───────── 도우미 ─────────
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+// 원(발밑)이 책상 네모 안으로 들어가면 가장 가까운 바깥으로 밀어내요
+function pushOut(o, rad) {
+  for (const [x0, y0, x1, y1] of OBST) {
+    const nx = clamp(o.x, x0, x1), ny = clamp(o.y, y0, y1);
+    let dx = o.x - nx, dy = o.y - ny, d = Math.hypot(dx, dy);
+    if (d >= rad) continue;
+    if (d === 0) { // 네모 안쪽: 가장 가까운 변으로
+      const l = o.x - x0, r = x1 - o.x, t = o.y - y0, b = y1 - o.y, m = Math.min(l, r, t, b);
+      if (m === l) o.x = x0 - rad; else if (m === r) o.x = x1 + rad; else if (m === t) o.y = y0 - rad; else o.y = y1 + rad;
+    } else { o.x = nx + dx / d * rad; o.y = ny + dy / d * rad; }
+  }
+}
+function blocked(x, y, rad) { return OBST.some(([x0, y0, x1, y1]) => x > x0 - rad && x < x1 + rad && y > y0 - rad && y < y1 + rad); }
 function rand(a, b) { return a + Math.random() * (b - a); }
 function dist2(a, b) { return (a.x - b.x) ** 2 + (a.y - b.y) ** 2; }
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
