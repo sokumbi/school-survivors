@@ -32,8 +32,9 @@ def cells(im, cols, rows, names, prefix, meta):
         cell=cell.resize((max(1,int(w*SCALE)),max(1,int(h*SCALE))),Image.LANCZOS)
         cell.save(f'img/{prefix}_{n}.png')
         meta[f'{prefix}_{n}']={'ax':round(fx*SCALE),'ay':cell.size[1]}
-meta={}
-cells(cutout('src_img/hero.webp'),3,2,['idle','walk1','walk2','attack','hurt','down'],'hero',meta)
-cells(cutout('src_img/paper.webp'),2,2,['idle','walk1','walk2','attack'],'paper',meta)
-Image.open('src_img/classroom.webp').convert('RGB').save('img/classroom.jpg',quality=90)
-json.dump(meta,open('img/sprites.json','w'),indent=1); print(meta)
+if __name__=="__main__":
+    meta={}
+    cells(cutout('src_img/hero.webp'),3,2,['idle','walk1','walk2','attack','hurt','down'],'hero',meta)
+    cells(cutout('src_img/paper.webp'),2,2,['idle','walk1','walk2','attack'],'paper',meta)
+    Image.open('src_img/classroom.webp').convert('RGB').save('img/classroom.jpg',quality=90)
+    json.dump(meta,open('img/sprites.json','w'),indent=1); print(meta)

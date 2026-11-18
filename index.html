@@ -32,7 +32,7 @@
 
 <div class="ov" id="startOv">
   <h1>학교 서바이버</h1>
-  <p>몰려오는 시험지 괴물을 피해 살아남아요!<br>공격은 저절로 나가요. 움직이기만 하면 돼요.</p>
+  <p>몰려오는 시험지 괴물을 피해 살아남아요!<br>처음엔 맨주먹, 곧 바닥에 야구방망이가 떨어져요.<br>공격은 저절로 나가요. 움직이기만 하면 돼요.</p>
   <p>PC: 방향키 / WASD &nbsp;·&nbsp; 폰: 화면을 누른 채 끌기</p>
   <button class="big" id="startBtn">시작하기</button>
 </div>
@@ -52,19 +52,21 @@
 'use strict';
 // ───────── 기본 설정 ─────────
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
-const BG_SCALE = 2;                       // 교실 그림(1536×1024)을 2배로 → 세계 3072×2048
+const BG_SCALE = 2.4;                     // 교실 그림(1536×1024)을 2.4배로 → 캐릭터가 책상보다 작아 보이게
+const HERO_H = 92, PAPER_H = 66;          // 세계에서의 키(픽셀)
+const BAT_TIME = 25;                      // 이 시간에 야구방망이가 바닥에 떨어져요
 const WORLD = { w: 1536 * BG_SCALE, h: 1024 * BG_SCALE };
 const FLOOR = { x0: 40 * BG_SCALE, y0: 245 * BG_SCALE, x1: 1500 * BG_SCALE, y1: 1010 * BG_SCALE }; // 다닐 수 있는 바닥
 const WIN_TIME = 300;                     // 5분 버티면 성공
 const BOSS_TIME = 240;                    // 4분에 보스
 
-const SPR = {
-  hero_idle:{ax:64,ay:168}, hero_walk1:{ax:76,ay:170}, hero_walk2:{ax:82,ay:170}, hero_attack:{ax:125,ay:162},
-  hero_hurt:{ax:81,ay:161}, hero_down:{ax:74,ay:124},
-  paper_idle:{ax:88,ay:147}, paper_walk1:{ax:82,ay:160}, paper_walk2:{ax:84,ay:150}, paper_attack:{ax:89,ay:149},
-};
+// 그림마다 발 위치(ax, ay)는 img/sprites.json (cut.py · cut2.py가 만들어요)
+let SPR = {};
+// 시트마다 그린 크기가 달라서, 같은 키가 되도록 배율을 맞춰요
+const K_BAT = HERO_H / 168, K_BARE = HERO_H / 84, K_PAPER = PAPER_H / 150;
 const IMG = {};
-function loadAll() {
+async function loadAll() {
+  SPR = await fetch('img/sprites.json').then(r => r.json());
   const list = Object.keys(SPR).map(k => [k, `img/${k}.png`]).concat([['bg', 'img/classroom.jpg']]);
   return Promise.all(list.map(([k, src]) => new Promise(res => {
     const im = new Image(); im.onload = () => { IMG[k] = im; res(); }; im.onerror = () => res(); im.src = src;
@@ -122,6 +124,7 @@ function inputDir() {
 
 // ───────── 무기 · 능력 ─────────
 const UPG = {
+  punch:  { name: '주먹 단련', ic: '👊', max: 4, desc: () => '주먹 피해 +30% · 더 빨리' },
   bat:    { name: '야구방망이', ic: '🏏', max: 6, desc: l => l === 0 ? '앞쪽을 크게 휘둘러요' : '피해 +30% · 범위 +12%' },
   eraser: { name: '지우개 던지기', ic: '🧽', max: 6, desc: l => l === 0 ? '가까운 괴물에게 지우개를 던져요' : '지우개 +1개 · 피해 +20%' },
   plane:  { name: '종이비행기', ic: '✈️', max: 6, desc: l => l === 0 ? '종이비행기가 주위를 빙빙 돌아요' : '비행기 +1대 · 피해 +20%' },
@@ -133,14 +136,14 @@ const UPG = {
 
 // ───────── 게임 상태 ─────────
 let state = 'title', T = 0, last = 0;
-let P, enemies, gems, shots, fx, nums, spawnAcc, kills, choices, bossOut;
+let P, enemies, gems, shots, fx, nums, spawnAcc, kills, choices, bossOut, item, itemDone;
 
 function reset() {
   P = { x: (FLOOR.x0 + FLOOR.x1) / 2, y: (FLOOR.y0 + FLOOR.y1) / 2 + 100, face: 1, hp: 100, maxHp: 100, speed: 260,
         lv: 1, xp: 0, need: 6, inv: 0, hurtT: 0, atkT: 0, walkT: 0, moving: false,
-        w: { bat: 1, eraser: 0, plane: 0, shoes: 0, milk: 0, alarm: 0, magnet: 0 },
-        cd: { bat: 0.3, eraser: 0.5 }, planeAng: 0 };
-  enemies = []; gems = []; shots = []; fx = []; nums = [];
+        w: { punch: 1, bat: 0, eraser: 0, plane: 0, shoes: 0, milk: 0, alarm: 0, magnet: 0 },
+        cd: { punch: 0.3, bat: 0.3, eraser: 0.5 }, planeAng: 0, joyT: 0, deadT: 0, won: false };
+  enemies = []; gems = []; shots = []; fx = []; nums = []; item = null; itemDone = false;
   spawnAcc = 0; kills = 0; T = 0; bossOut = false;
 }
 const cdMul = () => Math.pow(0.9, P.w.alarm);
@@ -159,16 +162,16 @@ function spawnEnemy(kind) {
   x = clamp(x, FLOOR.x0, FLOOR.x1); y = clamp(y, FLOOR.y0, FLOOR.y1);
   const m = 1 + T / 70;                         // 시간이 갈수록 단단해져요
   const base = { x, y, face: 1, hitT: 0, atkT: 0, walkT: Math.random(), kb: { x: 0, y: 0 }, lastHit: {} };
-  if (kind === 'boss') return enemies.push({ ...base, kind, s: 1.35, hp: 2500, maxHp: 2500, sp: 85, dmg: 25, r: 70, xp: 60 });
-  if (kind === 'elite') return enemies.push({ ...base, kind, s: 0.85, hp: 160 * m, maxHp: 160 * m, sp: 95, dmg: 18, r: 42, xp: 10 });
-  enemies.push({ ...base, kind: 'paper', s: 0.5, hp: 14 * m, maxHp: 14 * m, sp: 75 + Math.random() * 40 + T * 0.12, dmg: 8, r: 24, xp: 1 });
+  if (kind === 'boss') return enemies.push({ ...base, kind, s: 2.8, hp: 2500, maxHp: 2500, sp: 80, dmg: 25, r: 52, xp: 60 });
+  if (kind === 'elite') return enemies.push({ ...base, kind, s: 1.6, hp: 160 * m, maxHp: 160 * m, sp: 85, dmg: 18, r: 30, xp: 10 });
+  enemies.push({ ...base, kind: 'paper', s: 1, hp: 14 * m, maxHp: 14 * m, sp: 60 + Math.random() * 35 + T * 0.1, dmg: 8, r: 18, xp: 1 });
 }
 
 function damage(e, amt, kx = 0, ky = 0) {
   e.hp -= amt; e.hitT = 0.12;
   const kbm = e.kind === 'boss' ? 0.1 : e.kind === 'elite' ? 0.4 : 1;
   e.kb.x += kx * kbm; e.kb.y += ky * kbm;
-  nums.push({ x: e.x, y: e.y - 70 * e.s * 2, t: 0.6, v: Math.round(amt) });
+  nums.push({ x: e.x, y: e.y - PAPER_H * e.s, t: 0.6, v: Math.round(amt) });
   SND.hit();
 }
 
@@ -179,14 +182,14 @@ function killEnemy(e) {
     const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 200;
     fx.push({ type: 'scrap', x: e.x, y: e.y - 30, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 120, t: 0.6 + Math.random() * 0.3, rot: Math.random() * 6 });
   }
-  if (e.kind === 'boss') { bossOut = 'dead'; for (let i = 0; i < 20; i++) gems.push({ x: e.x + rand(-80, 80), y: e.y + rand(-50, 50), v: 5, big: true }); }
+  if (e.kind === 'boss') { bossOut = 'dead'; P.joyT = 1.2; for (let i = 0; i < 20; i++) gems.push({ x: e.x + rand(-80, 80), y: e.y + rand(-50, 50), v: 5, big: true }); }
 }
 
 // ───────── 레벨 업 ─────────
 function levelUp() {
   P.lv++; P.xp -= P.need; P.need = Math.round(P.need * 1.28 + 3);
   SND.lvup();
-  const pool = Object.keys(UPG).filter(k => P.w[k] < UPG[k].max);
+  const pool = Object.keys(UPG).filter(k => P.w[k] < UPG[k].max && !(k === 'bat' && !P.w.bat) && !(k === 'punch' && !P.w.punch));
   choices = shuffle(pool).slice(0, 3);
   if (!choices.length) { P.hp = Math.min(P.maxHp, P.hp + 30); return; }
   const box = document.getElementById('cards'); box.innerHTML = '';
@@ -218,27 +221,59 @@ function update(dt) {
   P.y = clamp(P.y + dy * P.speed * dt, FLOOR.y0, FLOOR.y1);
   if (dx > 0.1) P.face = 1; else if (dx < -0.1) P.face = -1;
   if (P.moving) P.walkT += dt;
-  P.inv -= dt; P.hurtT -= dt; P.atkT -= dt;
+  P.inv -= dt; P.hurtT -= dt; P.atkT -= dt; P.joyT -= dt;
+
+  // 아이템: 야구방망이가 바닥에 떨어져요 → 밟으면 주먹 대신 방망이
+  if (!itemDone && !item && T >= BAT_TIME) {
+    const a = Math.random() * Math.PI * 2;
+    item = { x: clamp(P.x + Math.cos(a) * 380, FLOOR.x0 + 60, FLOOR.x1 - 60),
+             y: clamp(P.y + Math.sin(a) * 260, FLOOR.y0 + 60, FLOOR.y1 - 40) };
+    toast('🏏 야구방망이가 떨어졌어요! 주워요');
+  }
+  if (item && Math.hypot(P.x - item.x, P.y - item.y) < 50) {
+    item = null; itemDone = true; P.w.bat = 1; P.w.punch = 0; P.cd.bat = 0.4;
+    P.joyT = 0.7; SND.lvup(); toast('야구방망이를 얻었어요!');
+  }
 
   // 괴물 나오기: 시간이 갈수록 많이
-  const rate = 1.2 + T * 0.055;               // 초당 마리 수
+  const rate = 0.8 + T * 0.05;                // 초당 마리 수
   spawnAcc += rate * dt;
   while (spawnAcc >= 1 && enemies.length < 260) { spawnAcc--; spawnEnemy('paper'); }
   if (Math.floor(T / 45) > Math.floor((T - dt) / 45)) for (let i = 0; i < 1 + Math.floor(T / 90); i++) spawnEnemy('elite');
   if (T >= BOSS_TIME && !bossOut) { bossOut = true; spawnEnemy('boss'); toast('⚠️ 기말고사 대왕이 나타났어요!'); }
 
-  // 무기: 야구방망이
+  // 무기: 맨주먹 (처음 무기) — 가까이 온 괴물 쪽으로 몸을 돌려 쳐요
+  if (P.w.punch) {
+    P.cd.punch -= dt;
+    if (P.cd.punch <= 0) {
+      let tgt = null, best = 150 * 150;
+      for (const e of enemies) { const d = dist2(e, P); if (d < best) { best = d; tgt = e; } }
+      if (tgt) {
+        const lv = P.w.punch;
+        P.cd.punch = 0.7 * Math.pow(0.9, lv - 1) * cdMul();
+        if (!P.moving) P.face = tgt.x >= P.x ? 1 : -1;
+        P.atkT = 0.24; SND.swing();
+        const cx = P.x + P.face * 34, cy = P.y - 35, R = 62, dmg = 12 * (1 + 0.3 * (lv - 1));
+        fx.push({ type: 'pow', x: cx + P.face * 20, y: cy, t: 0.15 });
+        for (const e of enemies) {
+          const vx = e.x - P.x, vy = e.y - P.y;
+          if (Math.hypot(vx - P.face * 25, vy) < R + e.r && vx * P.face > -15) damage(e, dmg, P.face * 200, 0);
+        }
+      }
+    }
+  }
+  // 무기: 야구방망이 (아이템으로 얻어요)
   if (P.w.bat) {
     P.cd.bat -= dt;
     if (P.cd.bat <= 0) {
-      P.cd.bat = 1.15 * cdMul();
-      const lv = P.w.bat, R = 150 * (1 + 0.12 * (lv - 1)), dmg = 22 * (1 + 0.3 * (lv - 1));
+      P.cd.bat = 1.1 * cdMul();
+      const lv = P.w.bat, R = 125 * (1 + 0.12 * (lv - 1)), dmg = 24 * (1 + 0.3 * (lv - 1));
       P.atkT = 0.22; SND.swing();
-      const cx = P.x + P.face * 40, cy = P.y - 40;
+      const cx = P.x + P.face * 30, cy = P.y - 35;
       fx.push({ type: 'arc', x: cx, y: cy, face: P.face, R, t: 0.2 });
       for (const e of enemies) {
-        const vx = e.x - cx, vy = (e.y - 30) - cy, d = Math.hypot(vx, vy);
-        if (d < R + e.r && vx * P.face > -40) damage(e, dmg, P.face * 260, vy / (d || 1) * 120);
+        const vx = e.x - P.x, vy = e.y - P.y, d = Math.hypot(vx, vy);
+        if (d < R + e.r && vx * P.face > -20) damage(e, dmg, P.face * 260, vy / (d || 1) * 120);
       }
     }
   }
@@ -250,8 +285,8 @@ function update(dt) {
       const n = P.w.eraser, dmg = 14 * (1 + 0.2 * (n - 1));
       const near = enemies.slice().sort((a, b) => dist2(a, P) - dist2(b, P)).slice(0, n);
       near.forEach((t, i) => {
-        const a = Math.atan2(t.y - 30 - (P.y - 50), t.x - P.x) + (i - (n - 1) / 2) * 0.12;
-        shots.push({ x: P.x, y: P.y - 50, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, t: 1.2, dmg, rot: 0 });
+        const a = Math.atan2(t.y - 25 - (P.y - 40), t.x - P.x) + (i - (n - 1) / 2) * 0.12;
+        shots.push({ x: P.x, y: P.y - 40, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, t: 1.2, dmg, rot: 0 });
       });
     }
   }
@@ -261,7 +296,7 @@ function update(dt) {
   // 지우개 날아가기
   for (const s of shots) {
     s.x += s.vx * dt; s.y += s.vy * dt; s.t -= dt; s.rot += dt * 12;
-    for (const e of enemies) if (e.hp > 0 && Math.hypot(e.x - s.x, e.y - 30 - s.y) < e.r + 12) {
+    for (const e of enemies) if (e.hp > 0 && Math.hypot(e.x - s.x, e.y - PAPER_H * e.s * 0.45 - s.y) < e.r + 12) {
       damage(e, s.dmg, s.vx * 0.25, s.vy * 0.25); s.t = 0; break;
     }
   }
@@ -274,14 +309,16 @@ function update(dt) {
     e.face = vx > 0 ? 1 : -1;
     e.x += (vx / d * e.sp + e.kb.x) * dt; e.y += (vy / d * e.sp + e.kb.y) * dt;
     e.kb.x *= Math.pow(0.002, dt); e.kb.y *= Math.pow(0.002, dt);
+    { const qx = e.x - P.x, qy = e.y - P.y, q = Math.hypot(qx, qy) || 1, mn = e.r + 16;
+      if (q < mn) { e.x = P.x + qx / q * mn; e.y = P.y + qy / q * mn; } }
     e.x = clamp(e.x, FLOOR.x0, FLOOR.x1); e.y = clamp(e.y, FLOOR.y0, FLOOR.y1);
     e.walkT += dt; e.hitT -= dt; e.atkT -= dt;
-    if (d < e.r + 30) {
+    if (d < e.r + 22) {
       e.atkT = 0.25;
       if (P.inv <= 0) { P.hp -= e.dmg; P.inv = 0.6; P.hurtT = 0.3; SND.hurt(); shake = 8; }
     }
     // 종이비행기에 닿으면
-    for (const pl of planes) if (Math.hypot(e.x - pl.x, e.y - 30 - pl.y) < e.r + 18) {
+    for (const pl of planes) if (Math.hypot(e.x - pl.x, e.y - PAPER_H * e.s * 0.45 - pl.y) < e.r + 16) {
       const k = 'pl' + pl.i;
       if (!e.lastHit[k] || T - e.lastHit[k] > 0.45) { e.lastHit[k] = T; damage(e, 10 * (1 + 0.2 * (P.w.plane - 1)), (e.x - P.x) * 0.6, (e.y - P.y) * 0.6); }
     }
@@ -318,7 +355,7 @@ function planePositions() {
   const n = P.w.plane, out = [];
   for (let i = 0; i < n; i++) {
     const a = P.planeAng + i * Math.PI * 2 / n;
-    out.push({ i, a, x: P.x + Math.cos(a) * 140, y: P.y - 45 + Math.sin(a) * 105 });
+    out.push({ i, a, x: P.x + Math.cos(a) * 115, y: P.y - 38 + Math.sin(a) * 85 });
   }
   return out;
 }
@@ -350,9 +387,8 @@ function toast(m) { toastMsg = m; toastT = 3; }
 function resize() {
   const dpr = Math.min(2, devicePixelRatio || 1);
   cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-  // 화면 높이에 맞춰 확대: 세로로 약 760 세계 픽셀이 보이게
-  // 세로 화면에서는 가로로 약 1100 세계 픽셀이 보이게 줄여요
-  view.z = Math.max(0.35, Math.min(cv.height / 760, cv.width / 1100));
+    // 세로로 약 1000, 가로로 약 1300 세계 픽셀이 보이게
+  view.z = Math.max(0.3, Math.min(cv.height / 1000, cv.width / 1300));
 }
 addEventListener('resize', resize);
 
@@ -387,6 +423,7 @@ function render() {
     ctx.fill(); ctx.stroke();
   }
 
+  drawItem();
   // 그림자 + 캐릭터를 y 순서로
   const actors = enemies.map(e => ({ y: e.y, e })).concat([{ y: P.y, p: true }]);
   actors.sort((a, b) => a.y - b.y);
@@ -416,6 +453,11 @@ function render() {
       if (f.face > 0) ctx.arc(f.x, f.y, f.R * 0.8, -1.3, -1.3 + 2.6 * Math.min(1, s * 1.6));
       else ctx.arc(f.x, f.y, f.R * 0.8, Math.PI + 1.3, Math.PI + 1.3 - 2.6 * Math.min(1, s * 1.6), true);
       ctx.stroke(); ctx.restore();
+    } else if (f.type === 'pow') {
+      ctx.save(); ctx.globalAlpha = f.t / 0.15; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#ffb300'; ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, r = i % 2 ? 9 : 20; ctx.lineTo(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r); }
+      ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     } else if (f.type === 'scrap') {
       ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot); ctx.globalAlpha = Math.min(1, f.t * 2);
       ctx.fillStyle = '#f4f4f4'; ctx.fillRect(-6, -4, 12, 8); ctx.fillStyle = '#e33'; ctx.fillRect(-2, -1, 5, 2); ctx.restore();
@@ -430,6 +472,7 @@ function render() {
   ctx.globalAlpha = 1;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  drawItemArrow();
   drawHUD();
 }
 
@@ -438,14 +481,51 @@ function shadow(x, y, w) {
 }
 
 function drawHero() {
-  shadow(P.x, P.y, 34);
-  let key = 'hero_idle';
-  if (P.hp <= 0) key = 'hero_down';
-  else if (P.hurtT > 0) key = 'hero_hurt';
-  else if (P.atkT > 0) key = 'hero_attack';
-  else if (P.moving) key = Math.floor(P.walkT * 8) % 2 ? 'hero_walk1' : 'hero_walk2';
-  const blink = P.inv > 0 && Math.floor(P.inv * 20) % 2;
-  drawSprite(key, P.x, P.y, 0.62, P.face, blink ? 0.45 : 1);
+  shadow(P.x, P.y, 26);
+  let key, k;
+  const bat = P.w.bat > 0;
+  if (state === 'over' && P.won) key = 'h2_joy';
+  else if (P.hp <= 0) key = P.deadT < 0.45 ? 'h2_fall' : 'h2_down';
+  else if (P.joyT > 0) key = 'h2_joy';
+  else if (P.hurtT > 0) key = bat ? 'hero_hurt' : 'h2_stagger';
+  else if (P.atkT > 0) key = bat ? 'hero_attack' : (P.atkT > 0.17 ? 'h2_punch1' : 'h2_punch2');
+  else if (P.moving) key = bat ? (Math.floor(P.walkT * 8) % 2 ? 'hero_walk1' : 'hero_walk2')
+                             : 'h2_walk' + (Math.floor(P.walkT * 10) % 4);
+  else if (bat) key = 'hero_idle';
+  else key = P.hp < P.maxHp * 0.3 ? 'h2_tired' : 'h2_ready';
+  k = key.startsWith('h2_') ? K_BARE : K_BAT;
+  const blink = P.inv > 0 && P.hp > 0 && Math.floor(P.inv * 20) % 2;
+  drawSprite(key, P.x, P.y, k, P.face, blink ? 0.45 : 1);
+}
+
+// 바닥에 떨어진 야구방망이 (반짝이며 둥둥)
+function drawItem() {
+  if (!item) return;
+  const bob = Math.sin(T * 5) * 6, x = item.x, y = item.y - 20 + bob;
+  shadow(item.x, item.y, 22);
+  ctx.save(); ctx.globalAlpha = 0.35 + 0.25 * Math.sin(T * 8); ctx.fillStyle = '#fff3a0';
+  ctx.beginPath(); ctx.arc(x, y, 34, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-0.7);
+  ctx.fillStyle = '#c98a4b'; ctx.strokeStyle = '#3b2412'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-30, -3); ctx.lineTo(18, -8); ctx.quadraticCurveTo(32, -8, 32, 0);
+  ctx.quadraticCurveTo(32, 8, 18, 8); ctx.lineTo(-30, 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3b2412'; ctx.fillRect(-34, -4, 5, 8); ctx.restore();
+}
+
+// 아이템이 화면 밖이면 가장자리에 화살표
+function drawItemArrow() {
+  if (!item) return;
+  const W = cv.width, H = cv.height, z = view.z;
+  const sx = (item.x - view.x) * z, sy = (item.y - view.y) * z, m = 40;
+  if (sx > m && sx < W - m && sy > m && sy < H - m) return;
+  const cx = W / 2, cy = H / 2, a = Math.atan2(sy - cy, sx - cx);
+  const ax = clamp(sx, m, W - m), ay = clamp(sy, m, H - m);
+  ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+  ctx.fillStyle = '#ffd54f'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -13); ctx.lineTo(-10, 13); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  ctx.font = `${22 * Math.max(1, Math.min(W, H) / 420)}px sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText('🏏', ax - Math.cos(a) * 34, ay - Math.sin(a) * 34 + 8);
 }
 
 function drawEnemy(e) {
@@ -456,13 +536,13 @@ function drawEnemy(e) {
     ctx.save();
     ctx.filter = e.kind === 'boss' ? 'sepia(1) saturate(6) hue-rotate(-30deg) brightness(.85)' : 'sepia(.9) saturate(3) hue-rotate(10deg)';
   }
-  drawSprite(key, e.x, e.y, e.s, e.face, 1, e.hitT > 0);
+  drawSprite(key, e.x, e.y, K_PAPER * e.s, e.face, 1, e.hitT > 0);
   if (e.kind !== 'paper') {
     ctx.restore();
-    const w = e.kind === 'boss' ? 160 : 70, top = e.y - 160 * e.s * (e.kind === 'boss' ? 1.15 : 1.1);
+    const w = e.kind === 'boss' ? 140 : 60, top = e.y - PAPER_H * e.s - 14;
     ctx.fillStyle = '#000'; ctx.fillRect(e.x - w / 2 - 2, top - 2, w + 4, 12);
     ctx.fillStyle = '#e53935'; ctx.fillRect(e.x - w / 2, top, w * Math.max(0, e.hp / e.maxHp), 8);
-    if (e.kind === 'boss') { ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+    if (e.kind === 'boss') { ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
       ctx.strokeText('기말고사 대왕', e.x, top - 10); ctx.fillText('기말고사 대왕', e.x, top - 10); }
   }
 }
@@ -515,7 +595,7 @@ function start() {
   toast('시험지 괴물이 몰려와요! 5분만 버텨요');
 }
 function end(win) {
-  state = 'over';
+  state = 'over'; P.won = win; P.deadT = 0;
   document.getElementById('endTitle').textContent = win ? '🎉 5분 버티기 성공!' : '쓰러졌어요…';
   const m = Math.floor(T / 60), s = String(Math.floor(T % 60)).padStart(2, '0');
   document.getElementById('endInfo').textContent = `버틴 시간 ${m}:${s} · 처치 ${kills}마리 · 레벨 ${P.lv}`;
@@ -527,6 +607,7 @@ document.getElementById('againBtn').onclick = start;
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
   if (state === 'play') update(dt);
+  else if (state === 'over' && P) P.deadT += dt;
   if (P) render();
   requestAnimationFrame(loop);
 }
@@ -540,7 +621,8 @@ function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { co
 resize();
 loadAll().then(() => { reset(); requestAnimationFrame(loop); });
 // 자동 점검용
-window.__game = { get state() { return state; }, get P() { return P; }, get enemies() { return enemies; }, get T() { return T; }, start, set T(v) { T = v; } };
+window.__game = { get state() { return state; }, get P() { return P; }, get enemies() { return enemies; }, get T() { return T; }, get item() { return item; }, start, set T(v) { T = v; },
+  step(n = 60) { for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); if (state === 'over') P.deadT += n / 60; render(); return state; } };
 </script>
 </body>
 </html>
