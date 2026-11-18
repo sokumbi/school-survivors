@@ -1,0 +1,42 @@
+{
+ "hero_idle": {
+  "ax": 64,
+  "ay": 168
+ },
+ "hero_walk1": {
+  "ax": 76,
+  "ay": 170
+ },
+ "hero_walk2": {
+  "ax": 82,
+  "ay": 170
+ },
+ "hero_attack": {
+  "ax": 125,
+  "ay": 162
+ },
+ "hero_hurt": {
+  "ax": 81,
+  "ay": 161
+ },
+ "hero_down": {
+  "ax": 74,
+  "ay": 124
+ },
+ "paper_idle": {
+  "ax": 88,
+  "ay": 147
+ },
+ "paper_walk1": {
+  "ax": 82,
+  "ay": 160
+ },
+ "paper_walk2": {
+  "ax": 84,
+  "ay": 150
+ },
+ "paper_attack": {
+  "ax": 89,
+  "ay": 149
+ }
+}
