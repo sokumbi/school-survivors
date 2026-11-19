@@ -20,14 +20,6 @@
   .big{font-size:20px;font-weight:800;padding:13px 34px;border:0;border-radius:16px;background:#CF5D2A;color:#fff;box-shadow:0 5px 0 #7a3214}
   .big:active{transform:translateY(3px);box-shadow:0 2px 0 #7a3214}
   .sub{font-size:15px;font-weight:700;padding:10px 22px;border:0;border-radius:12px;background:#3a3a40;color:#fff}
-  .cards{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:860px}
-  .card{width:min(230px,29vw);min-width:140px;padding:12px;border-radius:16px;background:#2c2c2e;border:3px solid #555;text-align:left;box-sizing:border-box;cursor:pointer}
-  .card:active,.card:focus{border-color:#CF5D2A;outline:none}
-  .card .tch{font-size:12px;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block}
-  .card .ic{font-size:34px;margin:6px 0 2px}
-  .card b{display:block;font-size:17px}
-  .card .lv{font-size:12px;color:#ffb27a;margin:2px 0 4px}
-  .card p{font-size:13px}
   /* 교실(거점) */
   #hub{background:#1c1c22;justify-content:flex-start}
   .hub{display:flex;gap:12px;width:100%;max-width:960px;flex-wrap:wrap;justify-content:center;align-items:stretch}
@@ -58,6 +50,7 @@
     line-height:1.1;touch-action:none;box-shadow:0 4px 0 rgba(0,0,0,.4)}
   .gbtn[hidden]{display:none}
   .gbtn span{font-size:12px}
+  #pauseBtn.has{background:#b8860b;font-size:15px;animation:pulse .7s infinite alternate}
   #pauseBtn{top:max(14px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:44px;height:44px;border-radius:12px;background:rgba(0,0,0,.45);font-size:20px;box-shadow:none}
   #dashBtn{right:calc(max(16px,env(safe-area-inset-right)) + 104px);bottom:max(18px,env(safe-area-inset-bottom));width:74px;height:74px;font-size:26px;background:rgba(60,140,200,.85)}
   #ultBtn{right:max(16px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + 38px);width:92px;height:92px;font-size:30px;padding:6px}
@@ -65,6 +58,49 @@
   #ultBtn.ready{animation:pulse .7s infinite alternate}
   @keyframes pulse{to{transform:scale(1.08);filter:brightness(1.3)}}
   @media (max-height:500px){ #hub h1{font-size:20px} .heroTop img{height:70px} .ov{gap:8px} }
+  /* 기술 나무 */
+  #treeOv{background:rgba(10,10,18,.9);padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left))}
+  .tr-head{display:flex;align-items:center;gap:12px;width:100%;max-width:900px}
+  .tr-head h2{font-size:22px}
+  .tr-head .lvup{color:#ffd54f;font-weight:800;font-size:15px}
+  .tr-head .pts{margin-left:auto;font-weight:800;font-size:15px;background:#3a3020;border:2px solid #ffcf3f;border-radius:20px;padding:4px 12px;color:#ffd54f}
+  .tr-head .pts.zero{border-color:#555;background:#2a2a30;color:#aaa}
+  .tr-body{display:flex;gap:12px;width:100%;max-width:900px;align-items:stretch;justify-content:center}
+  .tr-tree{display:flex;flex-direction:column;gap:4px;flex:0 1 auto}
+  .tr-row{display:flex;align-items:center;gap:8px;height:42px}
+  .tr-t{width:44px;flex:none;font-size:12px;font-weight:800;border-radius:8px;padding:5px 0;text-align:center}
+  .tr-nodes{display:flex;align-items:center;flex:1}
+  .tr-line{width:12px;height:3px;background:#444;flex:none}
+  .tr-line.on{background:var(--c)}
+  .tr-n{position:relative;width:50px;height:40px;border-radius:11px;border:2px solid #4a4a52;background:#26262c;color:#fff;padding:0;flex:none;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .tr-n .e{font-size:19px}
+  .tr-n .pp{font-size:8px;letter-spacing:.5px;margin-top:2px;color:#777}
+  .tr-n.has{border-color:var(--c);background:color-mix(in srgb,var(--c) 28%,#222)}
+  .tr-n.has .pp{color:#ffd9a8}
+  .tr-n.lock{opacity:.35}
+  .tr-n.max{box-shadow:inset 0 0 0 2px #ffd54f}
+  .tr-n.rec{animation:glow .8s infinite alternate}
+  .tr-n.rec::after{content:'⭐';position:absolute;top:-8px;right:-7px;font-size:12px}
+  .tr-n.sel{outline:3px solid #fff;outline-offset:1px}
+  @keyframes glow{from{box-shadow:0 0 0 0 #ffcf3f00}to{box-shadow:0 0 10px 3px #ffcf3fcc}}
+  .tr-b{margin-left:10px;width:64px;height:36px;flex:none;border-radius:18px;border:2px dashed #555;background:#1e1e24;color:#aaa;font-size:11px;font-weight:800;padding:0;line-height:1.15}
+  .tr-b.t1{border-style:solid;border-color:var(--c);color:#fff}
+  .tr-b.t2{border-style:solid;border-color:#ffd54f;color:#ffd54f;background:color-mix(in srgb,var(--c) 30%,#222)}
+  .tr-b.sel{outline:3px solid #fff;outline-offset:1px}
+  .tr-side{width:250px;flex:none;background:#24242a;border-radius:16px;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;text-align:left}
+  .tr-side .ic{font-size:34px;line-height:1}
+  .tr-side .nm{font-size:18px;font-weight:800}
+  .tr-side .tc{font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;display:inline-block}
+  .tr-side .lvt{font-size:13px;color:#ffb27a}
+  .tr-side .ds{font-size:13px;line-height:1.45;opacity:.9}
+  .tr-side .why{font-size:12px;color:#ff8a80}
+  .tr-side .sp{flex:1}
+  .tr-side .big{font-size:17px;padding:10px 0;width:100%}
+  .tr-side .sub{width:100%;padding:8px 0}
+  .learn{border:0;border-radius:12px;padding:10px 0;width:100%;background:#4E9A63;color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 0 #2c5c3a}
+  .learn:disabled{background:#3a3a40;color:#888;box-shadow:none}
+  @media (orientation:portrait){ .tr-body{flex-direction:column;align-items:center} .tr-side{width:100%;max-width:440px} .tr-n{width:44px} .tr-line{width:7px} .tr-b{width:56px} }
 </style>
 </head>
 <body>
@@ -74,10 +110,7 @@
 <button id="ultBtn" class="gbtn" hidden><div class="in">⚾<span>필살기</span></div></button>
 
 <div class="ov" id="hub"></div>
-<div class="ov" id="lvOv" hidden>
-  <h2>레벨 업! 하나 골라요</h2>
-  <div class="cards" id="cards"></div>
-</div>
+<div class="ov" id="treeOv" hidden></div>
 <div class="ov" id="msgOv" hidden></div>
 
 <script>
@@ -211,10 +244,12 @@ function initAudio() { if (!AC) try { AC = new (window.AudioContext || window.we
 const keys = {};
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); keys[k] = true;
-  if (state === 'levelup' && ['1', '2', '3'].includes(e.key)) pickChoice(+e.key - 1);
+  if (state === 'tree' && ['1', '2', '3'].includes(e.key) && tree.recs[+e.key - 1]) learn(tree.recs[+e.key - 1]);
+  if (state === 'tree' && (e.key === 'Enter' || e.key === 'Escape')) { closeTree(); return; }
+  if (state === 'play' && (k === 'tab' || k === 'k')) { e.preventDefault(); openTree('pause'); }
   if (state === 'play' && (k === ' ' || k === 'shift')) dash();
   if (state === 'play' && (k === 'e' || k === 'q')) ultimate();
-  if (e.key === 'Escape' && (state === 'play' || state === 'pause')) togglePause();
+  if (e.key === 'Escape' && state === 'play') togglePause();
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const stick = { on: false, id: null, sx: 0, sy: 0, x: 0, y: 0 };
@@ -273,14 +308,14 @@ const MAX_WEAPONS = 5;
 
 // ════════════════ 상태 ════════════════
 let state = 'hub', last = 0;
-let P, B, enemies, gems, coins, items, shots, puddles, fx, nums, ghosts, choices, run;
+let P, B, enemies, gems, coins, items, shots, puddles, fx, nums, ghosts, run;
 let grid, roomOf, rooms, walkTiles, explored, chests, stairs, flow, flowT = 0, mini, miniDirty;
 
 function newRun() {
   B = baseStats();
   P = { x: 0, y: 0, face: 1, hp: B.maxHp, maxHp: B.maxHp, speed: B.speed, bonusHp: 0, speedMul: 1,
         lv: 1, xp: 0, need: 6, inv: 0, hurtT: 0, atkT: 0, walkT: 0, moving: false, joyT: 0, deadT: 0, won: false,
-        dashT: 0, dashCd: 0, dvx: 0, dvy: 0, ult: 0, ultT: 0,
+        dashT: 0, dashCd: 0, dvx: 0, dvy: 0, ult: 0, ultT: 0, pts: 0,
         w: Object.fromEntries(Object.keys(UPG).map(k => [k, 0])), cd: {}, planeAng: 0 };
   P.w.punch = 1;
   run = { floor: 1, kills: 0, gold: 0, t: 0, ft: 0, boss: null, bossDead: false, spawnAcc: 0, newItems: 0 };
@@ -289,7 +324,7 @@ function newRun() {
 }
 function recalc() { // 장비를 바꾸면 능력치 다시 계산
   const oldMax = P.maxHp; B = baseStats();
-  P.maxHp = B.maxHp + P.bonusHp; P.hp += Math.max(0, P.maxHp - oldMax); P.hp = Math.min(P.hp, P.maxHp);
+  P.maxHp = B.maxHp + P.bonusHp + 20 * tb('food'); P.hp += Math.max(0, P.maxHp - oldMax); P.hp = Math.min(P.hp, P.maxHp);
   P.speed = B.speed * P.speedMul;
 }
 
@@ -428,9 +463,9 @@ function ambush(r) {
     spawnAt(k === 0 && (run.floor > 1 || Math.random() < 0.4) ? 'elite' : 'paper', x, y);
   }
 }
-const dmgMul = () => B.dmg * (1 + 0.12 * P.w.power);
+const dmgMul = () => B.dmg * (1 + 0.12 * P.w.power) * (1 + 0.1 * tb('pe'));
 function damage(e, amt, kx = 0, ky = 0, noSnd) {
-  let crit = Math.random() < B.crit;
+  let crit = Math.random() < B.crit + 0.05 * tb('kor');
   amt *= dmgMul() * (crit ? 2 : 1);
   e.hp -= amt; e.hitT = 0.12;
   const kbm = e.kind === 'boss' ? 0.1 : e.kind === 'elite' ? 0.4 : 1;
@@ -475,36 +510,138 @@ function ultimate() {
 
 // ════════════════ 레벨 업 ════════════════
 const weaponCount = () => Object.keys(UPG).filter(k => UPG[k].w && P.w[k] > 0).length;
-function levelUp() {
-  P.lv++; P.xp -= P.need; P.need = Math.round(P.need * 1.28 + 3);
-  SND.lvup();
-  const full = weaponCount() >= MAX_WEAPONS;
-  const pool = Object.keys(UPG).filter(k => P.w[k] < UPG[k].max && !(k === 'bat' && !P.w.bat) && !(k === 'punch' && !P.w.punch)
-    && !(full && UPG[k].w && !P.w[k]));
-  // 새 기술이 잘 나오도록: 아직 없는 공격 기술을 하나는 넣어요
-  const fresh = shuffle(pool.filter(k => UPG[k].w && !P.w[k]));
-  choices = shuffle(pool).slice(0, 3);
-  if (fresh.length && !choices.some(k => UPG[k].w && !P.w[k])) choices[0] = fresh[0];
-  choices = [...new Set(choices)];
-  if (!choices.length) { P.hp = Math.min(P.maxHp, P.hp + 30); return; }
-  const box = document.getElementById('cards'); box.innerHTML = '';
-  choices.forEach((k, i) => {
-    const u = UPG[k], l = P.w[k], t = TEACH[u.t];
-    const d = document.createElement('div'); d.className = 'card'; d.tabIndex = 0;
-    d.innerHTML = `<span class="tch" style="background:${t.col}">${t.name}</span><div class="ic">${u.ic}</div><b>${u.name}</b>
-      <div class="lv">${l === 0 ? (u.w ? '새 기술!' : '새로 배우기') : `${l}단계 → ${l + 1}단계`}</div><p>${u.desc(l)}</p>`;
-    d.onclick = () => pickChoice(i);
-    box.appendChild(d);
-  });
-  state = 'levelup'; show('lvOv'); stick.on = false;
+// 선생님 보너스: 한 선생님 기술을 합쳐 3단계, 6단계가 되면 열려요
+const TIER = [3, 6];
+const TBONUS = {
+  pe:    { ic: '💪', txt: '모든 공격 피해 +10%' },
+  kor:   { ic: '🎯', txt: '치명타 확률 +5%' },
+  art:   { ic: '🧲', txt: '보석 끌어오기 +30%' },
+  sci:   { ic: '⏱', txt: '공격 속도 +8%' },
+  music: { ic: '💚', txt: '1초마다 체력 +0.8 회복' },
+  math:  { ic: '⭐', txt: '경험치 +15%' },
+  food:  { ic: '❤️', txt: '최대 체력 +20' },
+};
+const tPts = t => Object.keys(UPG).reduce((s, k) => s + (UPG[k].t === t ? P.w[k] : 0), 0);
+const tb = t => P ? TIER.filter(n => tPts(t) >= n).length : 0;
+
+// 지금 배울 수 있는지 (안 되면 이유)
+function whyNot(k) {
+  const u = UPG[k];
+  if (k === 'bat' && !P.w.bat) return '사물함에서 방망이를 찾으면 열려요';
+  if (P.w[k] >= u.max) return '다 배웠어요!';
+  if (u.w && !P.w[k] && weaponCount() >= MAX_WEAPONS) return `공격 기술은 ${MAX_WEAPONS}개까지 들 수 있어요`;
+  if (P.pts <= 0) return '레벨 업하면 점수를 받아요';
+  return '';
 }
-function pickChoice(i) {
-  if (state !== 'levelup' || !choices[i]) return;
-  const k = choices[i]; P.w[k]++;
-  if (k === 'milk') { P.bonusHp += 15; P.maxHp += 15; P.hp = Math.min(P.maxHp, P.hp + 35); }
-  if (k === 'shoes') { P.speedMul *= 1.1; P.speed = B.speed * P.speedMul; }
-  hide('lvOv'); state = 'play';
-  if (P.xp >= P.need) levelUp();
+const learnable = () => Object.keys(UPG).filter(k => !whyNot(k));
+// 추천 3개: 아직 없는 공격 기술을 하나는 넣어요
+function makeRecs() {
+  const pool = learnable(); if (!pool.length) return [];
+  let r = shuffle(pool).slice(0, 3);
+  const fresh = shuffle(pool.filter(k => UPG[k].w && !P.w[k]));
+  if (fresh.length && !r.some(k => UPG[k].w && !P.w[k])) r[0] = fresh[0];
+  return [...new Set(r)];
+}
+
+function levelUp() {
+  let n = 0;
+  while (P.xp >= P.need) { P.lv++; P.xp -= P.need; P.need = Math.round(P.need * 1.28 + 3); P.pts++; n++; }
+  if (!n) return;
+  SND.lvup();
+  if (!learnable().length) { P.pts = 0; P.hp = Math.min(P.maxHp, P.hp + 30 * n); toast('모든 기술을 다 배웠어요! 체력 회복'); return; }
+  openTree('lv', n);
+}
+
+// ════════════════ 기술 나무 창 ════════════════
+const tree = { from: 'lv', sel: null, hist: [], recs: [], gained: 0 };
+function openTree(from, gained = 0) {
+  if (state !== 'play') return;
+  state = 'tree'; stick.on = false;
+  Object.assign(tree, { from, gained, hist: [], recs: P.pts > 0 ? makeRecs() : [] });
+  tree.sel = tree.recs[0] ? { k: tree.recs[0] } : null;
+  renderTree(); show('treeOv');
+}
+function closeTree() {
+  if (state !== 'tree') return;
+  hide('treeOv'); state = 'play'; lastBtn = '';
+}
+function learn(k) {
+  if (state !== 'tree' || whyNot(k)) return;
+  tree.hist.push({ k, hp: P.hp });
+  P.w[k]++; P.pts--;
+  if (k === 'milk') { P.bonusHp += 15; P.hp += 35; }
+  if (k === 'shoes') P.speedMul *= 1.1;
+  recalc(); SND.lvup();
+  tree.recs = P.pts > 0 ? makeRecs() : [];
+  renderTree();
+}
+function undoLearn() {
+  const h = tree.hist.pop(); if (!h) return;
+  const k = h.k; P.w[k]--; P.pts++;
+  if (k === 'milk') P.bonusHp -= 15;
+  if (k === 'shoes') P.speedMul /= 1.1;
+  recalc(); P.hp = Math.min(h.hp, P.maxHp); SND.coin();
+  tree.sel = { k }; tree.recs = makeRecs();
+  renderTree();
+}
+function renderTree() {
+  const box = document.getElementById('treeOv');
+  const sel = tree.sel || {};
+  const rows = Object.entries(TEACH).map(([t, T]) => {
+    const ks = Object.keys(UPG).filter(k => UPG[k].t === t);
+    const nodes = ks.map((k, i) => {
+      const u = UPG[k], l = P.w[k];
+      const cls = ['tr-n', l ? 'has' : '', l >= u.max ? 'max' : '', k === 'bat' && !l ? 'lock' : '',
+        tree.recs.includes(k) ? 'rec' : '', sel.k === k ? 'sel' : ''].join(' ');
+      const line = i ? `<i class="tr-line ${l && P.w[ks[i - 1]] ? 'on' : ''}"></i>` : '';
+      return `${line}<button class="${cls}" data-k="${k}"><span class="e">${k === 'bat' && !l ? '🔒' : u.ic}</span><span class="pp">${'●'.repeat(l)}${'○'.repeat(u.max - l)}</span></button>`;
+    }).join('');
+    const p = tPts(t), tier = tb(t);
+    const bonus = `<button class="tr-b ${tier ? 't' + tier : ''} ${sel.t === t ? 'sel' : ''}" data-t="${t}">${TBONUS[t].ic} ${Math.min(p, TIER[1])}/${tier ? TIER[1] : TIER[0]}</button>`;
+    return `<div class="tr-row" style="--c:${T.col}"><div class="tr-t" style="background:${T.col}">${T.name.split(' ')[0]}</div><div class="tr-nodes">${nodes}</div>${bonus}</div>`;
+  }).join('');
+
+  let side;
+  if (sel.k) {
+    const k = sel.k, u = UPG[k], l = P.w[k], T = TEACH[u.t], why = whyNot(k);
+    side = `<div style="display:flex;gap:10px;align-items:center"><div class="ic">${u.ic}</div><div><div class="nm">${u.name}</div>
+        <span class="tc" style="background:${T.col}">${T.name}</span></div></div>
+      <div class="lvt">${l ? `지금 ${l}단계 / 최대 ${u.max}` : (u.w ? '공격 기술 · 아직 없어요' : '능력 · 아직 없어요')}</div>
+      <div class="ds">${l >= u.max ? '최고 단계예요!' : (l ? `다음 단계: ${u.desc(l)}` : u.desc(0))}</div>
+      ${why && P.pts > 0 ? `<div class="why">${why}</div>` : ''}
+      <button class="learn" id="learnBtn" ${why ? 'disabled' : ''}>${l ? '한 단계 올리기' : '배우기'} (점수 1)</button>`;
+  } else if (sel.t) {
+    const t = sel.t, p = tPts(t), tier = tb(t);
+    side = `<div style="display:flex;gap:10px;align-items:center"><div class="ic">${TBONUS[t].ic}</div><div><div class="nm">${TEACH[t].name} 보너스</div>
+        <span class="tc" style="background:${TEACH[t].col}">이 줄 기술 합계 ${p}단계</span></div></div>
+      <div class="ds">이 선생님 기술을 합쳐서<br>${TIER.map((n, i) => `<b style="color:${tier > i ? '#9be29b' : '#888'}">${tier > i ? '✔' : '○'} ${n}단계: ${TBONUS[t].txt}</b>`).join('<br>')}</div>
+      <div class="ds" style="font-size:12px;opacity:.7">한 줄을 깊게 키우면 보너스가 붙어요.</div>`;
+  } else {
+    side = `<div class="ds">기술을 눌러서 자세히 보고,<br>한 번 더 누르면 배워요.<br><br>⭐ 반짝이는 기술이 추천이에요.</div>`;
+  }
+  const head = tree.from === 'lv' && tree.gained
+    ? `<h2>⭐ 레벨 업!</h2><span class="lvup">Lv ${P.lv}</span>` : `<h2>⏸ 기술 나무</h2><span class="lvup">Lv ${P.lv}</span>`;
+  box.innerHTML = `
+    <div class="tr-head">${head}<span style="font-size:13px;opacity:.8">공격 기술 ${weaponCount()}/${MAX_WEAPONS}</span>
+      <span class="pts ${P.pts ? '' : 'zero'}">배울 점수 ${P.pts}</span></div>
+    <div class="tr-body">
+      <div class="tr-tree">${rows}</div>
+      <div class="tr-side">${side}<div class="sp"></div>
+        ${tree.hist.length ? `<button class="sub" id="undoBtn">↶ 되돌리기 (${tree.hist.length})</button>` : ''}
+        <button class="big" id="goOnBtn">${P.pts && tree.from === 'lv' ? '나중에 쓰고 계속하기' : '계속하기 ▶'}</button>
+        ${tree.from === 'pause' ? `<button class="sub" id="quitBtn">그만하고 교실로</button>` : ''}
+      </div>
+    </div>`;
+  box.querySelectorAll('.tr-n').forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    if (sel.k === k && !whyNot(k)) learn(k); else { tree.sel = { k }; renderTree(); }
+  });
+  box.querySelectorAll('.tr-b').forEach(b => b.onclick = () => { tree.sel = { t: b.dataset.t }; renderTree(); });
+  const lb = box.querySelector('#learnBtn'); if (lb) lb.onclick = () => learn(sel.k);
+  const ub = box.querySelector('#undoBtn'); if (ub) ub.onclick = undoLearn;
+  box.querySelector('#goOnBtn').onclick = closeTree;
+  const qb = box.querySelector('#quitBtn');
+  if (qb) qb.onclick = () => { hide('treeOv'); state = 'play'; P.hp = 0; endRun(false); };
 }
 
 // ════════════════ 장비 줍기 ════════════════
@@ -520,8 +657,8 @@ function pickItem(g) {
 }
 
 // ════════════════ 한 프레임 ════════════════
-const cdMul = () => Math.pow(0.9, P.w.alarm) * B.cd;
-const magnetR = () => 120 * B.mag * (1 + 0.4 * P.w.magnet);
+const cdMul = () => Math.pow(0.9, P.w.alarm) * B.cd / (1 + 0.08 * tb('sci'));
+const magnetR = () => 120 * B.mag * (1 + 0.4 * P.w.magnet) * (1 + 0.3 * tb('art'));
 
 function update(dt) {
   run.t += dt; run.ft += dt;
@@ -537,7 +674,7 @@ function update(dt) {
   collide(P, 20);
   if (P.moving) P.walkT += dt;
   P.inv -= dt; P.hurtT -= dt; P.atkT -= dt; P.joyT -= dt; P.dashCd -= dt; P.ultT -= dt;
-  if (B.regen && P.hp > 0) P.hp =Math.min(P.maxHp, P.hp + B.regen * dt);
+  const rg = B.regen + 0.8 * tb('music'); if (rg && P.hp > 0) P.hp = Math.min(P.maxHp, P.hp + rg * dt);
 
   const ptx = (P.x / TS) | 0, pty = (P.y / TS) | 0;
   for (let y = pty - 6; y <= pty + 6; y++) for (let x = ptx - 8; x <= ptx + 8; x++) {
@@ -618,7 +755,7 @@ function update(dt) {
     if (d < mr || g.pull) { g.pull = true; const sp = 520 + Math.max(0, mr - d); g.x += vx / d * sp * dt; g.y += vy / d * sp * dt; }
     if (d < 30) g.got = true;
   }
-  for (const g of gems) if (g.got) { P.xp += g.v; SND.gem(); }
+  for (const g of gems) if (g.got) { P.xp += g.v * (1 + 0.15 * tb('math')); SND.gem(); }
   for (const c of coins) if (c.got) { run.gold += c.v; SND.coin(); }
   gems = gems.filter(g => !g.got); coins = coins.filter(c => !c.got);
   for (const g of items) { g.t += dt; if (Math.hypot(P.x - g.x, P.y - g.y) < 55) { g.got = true; pickItem(g); } }
@@ -1020,7 +1157,8 @@ function drawHUD() {
 let lastBtn = '';
 function updateButtons() {
   const dashPct = P.dashCd > 0 ? Math.round((1 - P.dashCd / 1.6) * 100) : 100, ult = Math.floor(P.ult);
-  const key = dashPct + '|' + ult; if (key === lastBtn) return; lastBtn = key;
+  const key = dashPct + '|' + ult + '|' + P.pts; if (key === lastBtn) return; lastBtn = key;
+  const pb = btn('pauseBtn'); pb.textContent = P.pts ? '⭐' + P.pts : '⏸'; pb.classList.toggle('has', !!P.pts);
   const d = btn('dashBtn'), u = btn('ultBtn');
   d.style.background = dashPct >= 100 ? 'rgba(60,140,200,.9)' : `conic-gradient(rgba(60,140,200,.9) ${dashPct}%, rgba(40,40,50,.85) 0)`;
   u.style.background = `conic-gradient(#ffcf3f ${ult}%, rgba(40,40,50,.85) 0)`;
@@ -1130,18 +1268,10 @@ function endRun(win) {
   setTimeout(() => show('msgOv'), win ? 400 : 1100);
 }
 function togglePause() {
-  const box = document.getElementById('msgOv');
-  if (state === 'play') {
-    state = 'pause'; stick.on = false;
-    box.innerHTML = `<h2>잠깐 멈춤</h2><button class="big" id="resumeBtn">계속하기</button><button class="sub" id="quitBtn">그만하고 교실로</button>
-      <p style="font-size:12px">그만둬도 지금까지 모은 금화와 장비는 가져가요.</p>`;
-    box.querySelector('#resumeBtn').onclick = togglePause;
-    box.querySelector('#quitBtn').onclick = () => { hide('msgOv'); state = 'play'; P.hp = 0; endRun(false); };
-    show('msgOv');
-  } else if (state === 'pause') { hide('msgOv'); state = 'play'; }
+  if (state === 'play') openTree('pause'); else if (state === 'tree') closeTree();
 }
 btn('pauseBtn').onclick = togglePause;
-document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') openTree('pause'); });
 
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
@@ -1165,7 +1295,7 @@ loadAll().then(() => { renderHub(); requestAnimationFrame(loop); });
 window.__game = {
   get state() { return state; }, get P() { return P; }, get run() { return run; }, get enemies() { return enemies; },
   get stairs() { return stairs; }, get chests() { return chests; }, get rooms() { return rooms; }, get S() { return S; }, get items() { return items; },
-  startRun, nextFloor, dash, ultimate, makeItem, pickItem,
+  startRun, nextFloor, dash, ultimate, makeItem, pickItem, openTree, closeTree, learn, levelUp, tree,
   step(n = 60) { for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); if (state === 'over') P.deadT += n / 60; render(); return state; },
 };
 </script>
