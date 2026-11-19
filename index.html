@@ -35,6 +35,14 @@
   .slot{background:#34343a;border-radius:10px;padding:6px;text-align:left;border:2px solid #444;min-height:52px;font-size:11px;line-height:1.35}
   .slot .nm{font-weight:800;font-size:12px}
   .slot .ic{font-size:18px;float:left;margin-right:4px}
+  .frs{width:100%;max-width:832px;display:flex;flex-direction:column;gap:8px;text-align:left}
+  .fr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+  .fr{display:flex;gap:8px;align-items:center;background:#34343a;border-radius:10px;padding:6px 8px;font-size:11px;line-height:1.35;opacity:.55}
+  .fr.on{opacity:1;border:2px solid #7CFC9A}
+  .fr img{height:46px}
+  .fr .q{font-size:26px;width:34px;text-align:center}
+  .fr b{font-size:13px}
+  .fr span{color:#7CFC9A;font-size:11px}
   .grow{flex:1;min-width:280px;max-width:520px;display:flex;flex-direction:column;gap:7px}
   .gold{font-size:18px;font-weight:800;color:#ffd54f}
   .row{display:flex;align-items:center;gap:10px;background:#34343a;border-radius:12px;padding:7px 10px;text-align:left}
@@ -137,7 +145,7 @@ async function loadAll() {
 // ════════════════ 저장 (이 기기 안에만) ════════════════
 const SAVE_KEY = 'school_survivor_v1';
 const SLOTS = { head: '머리', body: '옷', feet: '신발', acc: '장신구' };
-const defaultSave = () => ({ gold: 0, xp: 0, lv: 1, upg: { hp: 0, atk: 0, spd: 0, mag: 0, gold: 0 }, equip: { head: null, body: null, feet: null, acc: null }, best: 0, runs: 0, wins: 0 });
+const defaultSave = () => ({ gold: 0, xp: 0, lv: 1, upg: { hp: 0, atk: 0, spd: 0, mag: 0, gold: 0 }, equip: { head: null, body: null, feet: null, acc: null }, best: 0, runs: 0, wins: 0, friends: [] });
 let S = defaultSave();
 function loadSave() {
   try {
@@ -147,6 +155,18 @@ function loadSave() {
 }
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
 const needXP = lv => 30 + lv * 25;
+
+// 갇힌 친구들: 한 번 구해 주면 교실에 남아서 계속 도와줘요
+const FRIENDS = [
+  { id: 'minjun',  name: '민준', role: '반장',   tint: 'hue-rotate(200deg)',             perk: '탐험을 시작할 때 배울 점수 +1' },
+  { id: 'seoyeon', name: '서연', role: '보건부', tint: 'hue-rotate(300deg)',             perk: '최대 체력 +15' },
+  { id: 'jiho',    name: '지호', role: '체육부', tint: 'hue-rotate(90deg)',              perk: '대시를 더 자주 써요 (-20%)' },
+  { id: 'haeun',   name: '하은', role: '도서부', tint: 'hue-rotate(150deg)',             perk: '경험치 +10%' },
+  { id: 'doyun',   name: '도윤', role: '방송부', tint: 'hue-rotate(40deg) saturate(1.4)', perk: '필살기 게이지 25% 더 빨리' },
+  { id: 'sua',     name: '수아', role: '매점부', tint: 'hue-rotate(250deg) saturate(1.5)', perk: '금화 +15%' },
+];
+const hasF = id => (S.friends || []).includes(id);
+const DASH_CD = () => hasF('jiho') ? 1.28 : 1.6;
 
 // 교실에서 금화로 키우는 능력
 const GROW = {
@@ -202,11 +222,11 @@ function equipTotals() {
 function baseStats() {
   const e = equipTotals();
   return {
-    maxHp: 80 + (S.lv - 1) * 5 + S.upg.hp * 10 + e.hp,
+    maxHp: 80 + (S.lv - 1) * 5 + S.upg.hp * 10 + e.hp + (hasF('seoyeon') ? 15 : 0),
     dmg: (1 + (S.lv - 1) * 0.03) * (1 + S.upg.atk * 0.08) * (1 + e.atk / 100),
     speed: 240 * (1 + S.upg.spd * 0.05) * (1 + e.spd / 100),
     mag: (1 + S.upg.mag * 0.2) * (1 + e.mag / 100),
-    goldMul: 1 + S.upg.gold * 0.15,
+    goldMul: 1 + S.upg.gold * 0.15 + (hasF('sua') ? 0.15 : 0),
     cd: Math.max(0.5, 1 - e.cd / 100),
     crit: 0.05 + e.crit / 100,
     regen: e.regen,
@@ -309,6 +329,7 @@ const MAX_WEAPONS = 5;
 // ════════════════ 상태 ════════════════
 let state = 'hub', last = 0;
 let P, B, enemies, gems, coins, items, shots, puddles, fx, nums, ghosts, run;
+let cages = [];
 let grid, roomOf, rooms, walkTiles, explored, chests, stairs, flow, flowT = 0, mini, miniDirty;
 
 function newRun() {
@@ -318,7 +339,8 @@ function newRun() {
         dashT: 0, dashCd: 0, dvx: 0, dvy: 0, ult: 0, ultT: 0, pts: 0,
         w: Object.fromEntries(Object.keys(UPG).map(k => [k, 0])), cd: {}, planeAng: 0 };
   P.w.punch = 1;
-  run = { floor: 1, kills: 0, gold: 0, t: 0, ft: 0, boss: null, bossDead: false, spawnAcc: 0, newItems: 0 };
+  if (hasF('minjun')) P.pts = 1;
+  run = { floor: 1, kills: 0, gold: 0, t: 0, ft: 0, boss: null, bossDead: false, spawnAcc: 0, newItems: 0, saved: 0, newFriends: [], met: [] };
   fx = []; nums = []; ghosts = [];
   buildFloor(1);
 }
@@ -339,6 +361,12 @@ function buildFloor(n) {
   run.floor = n; run.ft = 0; run.boss = null; run.bossDead = false; run.spawnAcc = 0;
   enemies = []; gems = []; shots = []; coins = []; items = []; puddles = [];
   explored = new Uint8Array(GW * GH);
+  for (const c of cages) {
+    const pool = FRIENDS.filter(f => !hasF(f.id) && !run.met.includes(f.id));
+    c.f = pool.length ? pick(pool) : null; if (c.f) run.met.push(c.f.id);
+    c.tint = c.f ? c.f.tint : pick(FRIENDS).tint + ' brightness(.9)';
+    c.label = c.f ? `${c.f.name} (${c.f.role})` : '반 친구';
+  }
   mini = document.createElement('canvas'); mini.width = GW * 3; mini.height = GH * 3; miniDirty = true;
   const s = rooms[0];
   P.x = (s.x + s.w / 2) * TS; P.y = (s.y + s.h / 2) * TS;
@@ -387,6 +415,10 @@ function tryBuild(n) {
   chests = cand.slice(0, 2 + (n > 1 ? 1 : 0)).map((k, i) => {
     const r = rooms[k]; return { x: (r.x + r.w / 2) * TS, y: (r.y + 1.7) * TS, open: false, bat: n === 1 && i === 0 };
   });
+  const chestRooms = cand.slice(0, chests.length);
+  const cageRooms = cand.filter(k => !chestRooms.includes(k)).sort((a, b) => d[idx(cx(rooms[b]), cy(rooms[b]))] - d[idx(cx(rooms[a]), cy(rooms[a]))]);
+  cages = cageRooms.slice(0, 2).map(k => { const r = rooms[k]; r.cage = true;
+    return { x: (r.x + r.w / 2) * TS, y: (r.y + r.h / 2 + 0.6) * TS, room: k, st: 'locked', prog: 0, guards: [], t: 0 }; });
   const sx0 = cx(rooms[0]), sy0 = cy(rooms[0]);
   let count = walkCount();
   rooms.forEach(r => {
@@ -396,6 +428,7 @@ function tryBuild(n) {
       const a = idx(x, y), b = idx(x + 1, y);
       if (grid[a] !== ROOM || grid[b] !== ROOM) continue;
       if (chests.some(c => Math.abs(c.x / TS - x - 1) < 2.5 && Math.abs(c.y / TS - y) < 2)) continue;
+      if (cages.some(c => Math.abs(c.x / TS - x - 1) < 3 && Math.abs(c.y / TS - y) < 2.5)) continue;
       grid[a] = grid[b] = PROP;
       if (allReachable(sx0, sy0, count - 2)) count -= 2; else grid[a] = grid[b] = ROOM;
     }
@@ -474,7 +507,7 @@ function damage(e, amt, kx = 0, ky = 0, noSnd) {
   if (!noSnd) SND.hit();
 }
 function killEnemy(e) {
-  run.kills++; P.ult = Math.min(100, P.ult + (e.kind === 'paper' ? 2.5 : 10));
+  run.kills++; P.ult = Math.min(100, P.ult + (e.kind === 'paper' ? 2.5 : 10) * (hasF('doyun') ? 1.25 : 1));
   gems.push({ x: e.x, y: e.y, v: e.xp, big: e.xp > 1 });
   for (let i = 0; i < e.gold; i++) coins.push({ x: e.x + rand(-20, 20), y: e.y + rand(-14, 14), v: 1 });
   const chance = e.kind === 'boss' ? 1 : e.kind === 'elite' ? 0.35 : 0.006;
@@ -492,7 +525,7 @@ function dash() {
   if (P.dashCd > 0 || P.dashT > 0 || P.hp <= 0) return;
   let { dx, dy } = inputDir(); const l = Math.hypot(dx, dy);
   if (l < 0.1) { dx = P.face; dy = 0; } else { dx /= l; dy /= l; }
-  P.dvx = dx * 1150; P.dvy = dy * 1150; P.dashT = 0.17; P.dashCd = 1.6; P.inv = Math.max(P.inv, 0.3);
+  P.dvx = dx * 1150; P.dvy = dy * 1150; P.dashT = 0.17; P.dashCd = DASH_CD(); P.inv = Math.max(P.inv, 0.3);
   if (dx > 0.1) P.face = 1; else if (dx < -0.1) P.face = -1;
   SND.dash();
 }
@@ -506,6 +539,76 @@ function ultimate() {
     const d = Math.hypot(e.x - P.x, e.y - P.y);
     if (d < 560) damage(e, e.kind === 'boss' ? 160 : 110, (e.x - P.x) / (d || 1) * 900, (e.y - P.y) / (d || 1) * 900, true);
   }
+}
+
+// ════════════════ 갇힌 친구 구하기 ════════════════
+// 가까이 가면 지키는 괴물이 나와요 → 다 물리치고 우리 옆에 잠깐 서 있으면 자물쇠가 풀려요
+function updateCages(dt) {
+  for (const c of cages) {
+    c.t += dt;
+    if (c.st === 'free') continue;
+    const d = Math.hypot(P.x - c.x, P.y - c.y);
+    if (c.st === 'locked' && d < 330) {
+      c.st = 'guard';
+      const n = 3 + run.floor * 2;
+      for (let k = 0; k < n; k++) {
+        const a = k / n * Math.PI * 2, x = c.x + Math.cos(a) * 150, y = c.y + Math.sin(a) * 110;
+        if (solidAt(x, y)) continue;
+        c.guards.push(spawnAt(k < 1 + (run.floor > 1 ? 1 : 0) ? 'elite' : 'paper', x, y));
+      }
+      toast(`⛓ ${c.f ? c.f.name : '친구'}가 갇혀 있어요! 지키는 괴물을 물리쳐요`); SND.hurt();
+    }
+    if (c.st === 'guard') {
+      c.guards = c.guards.filter(e => enemies.includes(e));
+      if (!c.guards.length && d < 120) {
+        c.prog += dt / 1.3;
+        if (c.prog >= 1) freeCage(c);
+      } else c.prog = Math.max(0, c.prog - dt);
+    }
+  }
+}
+function freeCage(c) {
+  c.st = 'free'; c.t = 0; run.saved++;
+  P.pts++; P.hp = Math.min(P.maxHp, P.hp + P.maxHp * 0.3);
+  const g = 10 * run.floor; run.gold += g;
+  SND.lvup(); P.joyT = 1; shake = 6;
+  for (let k = 0; k < 14; k++) nums.push({ x: c.x + rand(-40, 40), y: c.y - 60 + rand(-30, 30), v: ['💖', '✨', '⭐'][k % 3], t: 1.2, big: true });
+  if (c.f && !hasF(c.f.id)) {
+    S.friends.push(c.f.id); save(); recalc(); run.newFriends.push(c.f.name);
+    toast(`🤝 ${c.f.name} 구출! 배울 점수 +1 · 교실에서 계속 도와줘요: ${c.f.perk}`);
+  } else toast(`🤝 친구를 구했어요! 배울 점수 +1 · 체력 회복 · 금화 +${g}`);
+}
+function drawCage(c) {
+  const x = c.x, y = c.y, free = c.st === 'free';
+  if (free && c.t > 2.4) return;
+  shadow(x, y + 4, 52);
+  // 아이
+  const key = free ? 'h2_joy' : 'h2_tired', hop = free ? -Math.abs(Math.sin(c.t * 9)) * 18 - c.t * 30 : 0;
+  drawSprite(key, x, y + hop, kOf(key) * 0.82, free ? 1 : (Math.sin(c.t * 0.8) > 0 ? 1 : -1), free ? Math.max(0, 1 - (c.t - 1.6) / 0.8) : 1, false, c.tint);
+  if (!free) {
+    // 철창
+    ctx.strokeStyle = '#3a3f4a'; ctx.lineWidth = 6;
+    ctx.strokeRect(x - 50, y - 118, 100, 122);
+    ctx.lineWidth = 4; for (let i = -30; i <= 30; i += 15) { ctx.beginPath(); ctx.moveTo(x + i, y - 118); ctx.lineTo(x + i, y + 4); ctx.stroke(); }
+    ctx.fillStyle = '#3a3f4a'; ctx.fillRect(x - 54, y - 124, 108, 10);
+    ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🔒', x + 2, y - 46);
+    // 구출 진행
+    if (c.prog > 0) {
+      ctx.lineWidth = 8; ctx.strokeStyle = '#0008'; ctx.beginPath(); ctx.arc(x, y - 56, 74, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#7CFC9A'; ctx.beginPath(); ctx.arc(x, y - 56, 74, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * c.prog); ctx.stroke();
+    }
+  }
+  // 이름표와 말풍선
+  const msg = free ? '고마워!' : c.st === 'guard' && c.guards.length ? '조심해!' : c.st === 'guard' ? '옆에 와 줘!' : '도와줘!';
+  ctx.font = 'bold 21px sans-serif'; ctx.textAlign = 'center';
+  const by = y - 150 + Math.sin(c.t * 4) * 4 + (free ? -c.t * 30 : 0), w = ctx.measureText(msg).width + 22;
+  ctx.globalAlpha = free ? Math.max(0, 1 - (c.t - 1.6) / 0.8) : 1;
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(x - w / 2, by - 23, w, 34, 13); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 6, by + 10); ctx.lineTo(x + 6, by + 10); ctx.lineTo(x, by + 18); ctx.fill();
+  ctx.fillStyle = '#222'; ctx.fillText(msg, x, by + 1);
+  ctx.font = 'bold 19px sans-serif'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = c.f ? '#ffd54f' : '#fff';
+  ctx.strokeText(c.label, x, y + 26); ctx.fillText(c.label, x, y + 26);
+  ctx.globalAlpha = 1;
 }
 
 // ════════════════ 레벨 업 ════════════════
@@ -697,6 +800,7 @@ function update(dt) {
   while (run.spawnAcc >= 1) { run.spawnAcc--; if (enemies.length < 110) spawnFar(); }
 
   for (const c of chests) if (!c.open && Math.hypot(P.x - c.x, P.y - c.y) < 60) openChest(c);
+  updateCages(dt);
   if (Math.hypot(P.x - stairs.x, P.y - stairs.y) < 64) {
     if (stairs.locked) { if (!run.lockMsgT || run.t - run.lockMsgT > 3) { run.lockMsgT = run.t; toast('🔒 보스를 물리쳐야 열려요'); } }
     else return nextFloor();
@@ -755,7 +859,7 @@ function update(dt) {
     if (d < mr || g.pull) { g.pull = true; const sp = 520 + Math.max(0, mr - d); g.x += vx / d * sp * dt; g.y += vy / d * sp * dt; }
     if (d < 30) g.got = true;
   }
-  for (const g of gems) if (g.got) { P.xp += g.v * (1 + 0.15 * tb('math')); SND.gem(); }
+  for (const g of gems) if (g.got) { P.xp += g.v * (1 + 0.15 * tb('math') + (hasF('haeun') ? 0.1 : 0)); SND.gem(); }
   for (const c of coins) if (c.got) { run.gold += c.v; SND.coin(); }
   gems = gems.filter(g => !g.got); coins = coins.filter(c => !c.got);
   for (const g of items) { g.t += dt; if (Math.hypot(P.x - g.x, P.y - g.y) < 55) { g.got = true; pickItem(g); } }
@@ -1043,9 +1147,9 @@ function render() {
   }
   for (const c of coins) { ctx.fillStyle = '#ffd54f'; ctx.strokeStyle = '#8a6100'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   for (const g of items) drawItem(g);
-  const list = enemies.map(e => ({ y: e.y, e })).concat(chests.map(c => ({ y: c.y, c })), [{ y: P.y, p: true }]);
+  const list = enemies.map(e => ({ y: e.y, e })).concat(chests.map(c => ({ y: c.y, c })), cages.map(g => ({ y: g.y, g })), [{ y: P.y, p: true }]);
   list.sort((a, b) => a.y - b.y);
-  for (const a of list) a.p ? drawHero() : a.c ? drawChest(a.c) : drawEnemy(a.e);
+  for (const a of list) a.p ? drawHero() : a.c ? drawChest(a.c) : a.g ? drawCage(a.g) : drawEnemy(a.e);
   for (const pl of planePositions()) {
     ctx.save(); ctx.translate(pl.x, pl.y); ctx.rotate(pl.a + Math.PI / 2);
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#334'; ctx.lineWidth = 2;
@@ -1156,7 +1260,7 @@ function drawHUD() {
 }
 let lastBtn = '';
 function updateButtons() {
-  const dashPct = P.dashCd > 0 ? Math.round((1 - P.dashCd / 1.6) * 100) : 100, ult = Math.floor(P.ult);
+  const dashPct = P.dashCd > 0 ? Math.round((1 - P.dashCd / DASH_CD()) * 100) : 100, ult = Math.floor(P.ult);
   const key = dashPct + '|' + ult + '|' + P.pts; if (key === lastBtn) return; lastBtn = key;
   const pb = btn('pauseBtn'); pb.textContent = P.pts ? '⭐' + P.pts : '⏸'; pb.classList.toggle('has', !!P.pts);
   const d = btn('dashBtn'), u = btn('ultBtn');
@@ -1180,6 +1284,7 @@ function drawMinimap(u) {
   const dot = (x, y, c, r) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(mx + x * k, my + y * k, r, 0, Math.PI * 2); ctx.fill(); };
   if (explored[idx((stairs.x / TS) | 0, (stairs.y / TS) | 0)]) dot(stairs.x, stairs.y, stairs.locked ? '#ff5252' : '#fff59d', 4 * u);
   for (const c of chests) if (!c.open && explored[idx((c.x / TS) | 0, (c.y / TS) | 0)]) dot(c.x, c.y, '#ffd54f', 3 * u);
+  for (const c of cages) if (c.st !== 'free' && explored[idx((c.x / TS) | 0, (c.y / TS) | 0)]) dot(c.x, c.y, '#7CFC9A', 3.5 * u);
   dot(P.x, P.y, '#ff6b4a', 3.5 * u);
 }
 function drawStairsHint(u) {
@@ -1229,6 +1334,12 @@ function renderHub() {
         ${rows}
         <p style="font-size:12px">금화와 장비는 탐험에서 모아요. 쓰러져도 가져와요. 더 좋은 장비는 저절로 바꿔 껴요.</p>
       </div>
+      <div class="pane frs">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>🤝 구출한 친구들</b><span style="font-size:13px;opacity:.8">${S.friends.length}/${FRIENDS.length}</span></div>
+        <div class="fr-grid">${FRIENDS.map(f => hasF(f.id)
+          ? `<div class="fr on"><img src="img/h2_joy.png" style="filter:${f.tint}" alt=""><div><b>${f.name}</b> <span>${f.role}</span><div>${f.perk}</div></div></div>`
+          : `<div class="fr"><div class="q">❓</div><div><b>???</b><div>층 어딘가에 갇혀 있어요</div></div></div>`).join('')}</div>
+      </div>
     </div>`;
   hub.querySelector('#goBtn').onclick = startRun;
   hub.querySelectorAll('.buy').forEach(b => b.onclick = () => {
@@ -1260,6 +1371,7 @@ function endRun(win) {
     <div class="pane" style="min-width:240px;text-align:left;line-height:1.9">
       🪙 금화 <b style="color:#ffd54f">+${gold}</b>${B.goldMul > 1 ? ' <span style="opacity:.6">(용돈 보너스 포함)</span>' : ''}<br>
       ⭐ 경험치 <b style="color:#4fc3ff">+${xp}</b><br>
+      ${run.saved ? `🤝 구출한 친구 <b style="color:#7CFC9A">${run.saved}명</b>${run.newFriends.length ? ` (${run.newFriends.join(', ')}는 이제 교실에서 도와줘요)` : ''}<br>` : ''}
       ${run.newItems ? `🎁 새 장비 <b style="color:#c46bff">${run.newItems}개</b> 장착<br>` : ''}
       ${S.lv > oldLv ? `<b style="color:#9be29b">캐릭터 레벨 업! Lv ${oldLv} → Lv ${S.lv}</b><br><span style="font-size:13px;opacity:.8">체력과 공격력이 올랐어요</span>` : ''}
     </div>
@@ -1295,7 +1407,7 @@ loadAll().then(() => { renderHub(); requestAnimationFrame(loop); });
 window.__game = {
   get state() { return state; }, get P() { return P; }, get run() { return run; }, get enemies() { return enemies; },
   get stairs() { return stairs; }, get chests() { return chests; }, get rooms() { return rooms; }, get S() { return S; }, get items() { return items; },
-  startRun, nextFloor, dash, ultimate, makeItem, pickItem, openTree, closeTree, learn, levelUp, tree,
+  startRun, nextFloor, dash, ultimate, makeItem, pickItem, get cages() { return cages; }, openTree, closeTree, learn, levelUp, tree,
   step(n = 60) { for (let i = 0; i < n && state === 'play'; i++) update(1 / 60); if (state === 'over') P.deadT += n / 60; render(); return state; },
 };
 </script>
