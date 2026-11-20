@@ -307,6 +307,80 @@
   .eq-tools button{flex:1;font-size:13px;padding:9px 0}
   @media (orientation:portrait){ .eq-body{flex-direction:column;align-items:center} .eq-doll{width:100%;max-width:440px;grid-template-columns:64px 1fr 64px;grid-template-rows:repeat(3,64px) auto;gap:6px} .eq-slot{width:64px;height:64px} .eq-slot .pic{width:40px;height:40px} .eq-right{width:100%;max-width:440px} .eq-doll .me img{height:150px} .eq-bag{grid-template-columns:repeat(7,1fr);gap:4px} .eq-card{min-height:0} }
   @media (max-height:440px){ .eq-doll{grid-template-rows:repeat(3,60px) auto;grid-template-columns:60px 1fr 60px;width:250px} .eq-slot{width:60px;height:60px} .eq-slot .pic{width:38px;height:38px} .eq-doll .me img{height:150px} .eq-bag{gap:3px;padding:5px;grid-template-columns:repeat(10,1fr)} .eq-right{max-width:480px;gap:5px} .eq-sum{font-size:11px;padding:4px 6px} .eq-head h2{font-size:17px} .eq-tools button{padding:6px 0} #eqOv{gap:4px} .eq-card .st{column-count:2;column-gap:14px;font-size:12px;line-height:1.4} .eq-card .btns button{padding:6px 0} .eq-card{min-height:0;padding:6px 10px;gap:3px} .eq-card .nm{font-size:15px} }
+
+  /* ═══ RPG 창 (상태창과 같은 남색 판 + 금색 픽셀 테두리) — 장비·창고·기술 나무 ═══ */
+  :root{--rp-bg:#0d0a16;--rp-p1:#1f1936;--rp-p2:#141022;--rp-slot:#0c0918;--rp-gold:#c9a24a;--rp-gold2:#f2d27a;--rp-ink:#f3ead2;--rp-dim:#a99fc4}
+  .rp-panel{background:linear-gradient(180deg,var(--rp-p1),var(--rp-p2));border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000,inset 0 3px 0 2px rgba(255,255,255,.06);clip-path:var(--px);box-sizing:border-box;position:relative}
+  .rp-title{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:linear-gradient(180deg,var(--rp-gold2),var(--rp-gold));color:#2a1a08;font-weight:900;font-size:14px;padding:3px 12px 3px 10px;clip-path:var(--px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);white-space:nowrap}
+  .rp-title small{font-size:11px;opacity:.75;font-weight:800}
+  .rp-btn{border:0;color:#fff;font-weight:900;clip-path:var(--px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.25);cursor:pointer}
+  .rp-btn.g{background:#3f8f55} .rp-btn.o{background:#c46a2c} .rp-btn.y{background:#b8862a} .rp-btn.k{background:#3a3352;color:#e8e0ff}
+  .rp-x{margin-left:8px;width:38px;height:38px;font-size:20px;line-height:1;padding:0;background:#3a3352}
+  /* 장비 · 창고 */
+  #eqOv{background:radial-gradient(ellipse at 50% -10%,#2b2346,var(--rp-bg) 70%)}
+  .eq-head{background:linear-gradient(180deg,#221b3a,#161127);border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000;clip-path:var(--px);padding:4px 6px 4px 10px;box-sizing:border-box}
+  .eq-head h2{color:var(--rp-gold2);text-shadow:0 2px 0 #000;font-size:19px}
+  .eq-head .gold{background:var(--rp-slot);padding:4px 10px;clip-path:var(--px);box-shadow:inset 0 0 0 2px #3a3152}
+  .eq-doll{background:linear-gradient(180deg,var(--rp-p1),var(--rp-p2));border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000;padding:34px 10px 10px;position:relative}
+  .eq-doll::before{content:'내 장비';position:absolute;left:8px;top:6px;background:linear-gradient(180deg,var(--rp-gold2),var(--rp-gold));color:#2a1a08;font-weight:900;font-size:13px;padding:2px 10px;clip-path:var(--px)}
+  .eq-doll .me{background:radial-gradient(ellipse at 50% 88%,rgba(242,210,122,.28),transparent 32%),radial-gradient(circle at 50% 45%,#2f2650,transparent 70%);position:relative}
+  .eq-doll .me::after{content:'';position:absolute;bottom:2px;left:50%;width:62%;height:12px;transform:translateX(-50%);border-radius:50%;background:rgba(0,0,0,.45);z-index:0}
+  .eq-doll .me img{position:relative;z-index:1;filter:drop-shadow(0 3px 0 rgba(0,0,0,.4))}
+  .eq-slot{background:radial-gradient(circle at 50% 40%,#1d1733,var(--rp-slot) 75%);border:3px solid #4a3f6a;box-shadow:inset 0 0 0 2px #000,inset 0 -6px 10px rgba(0,0,0,.5);color:var(--rp-dim)}
+  .eq-slot:not(.empty){box-shadow:inset 0 0 0 2px #000,inset 0 0 16px color-mix(in srgb,currentColor 0%,transparent),0 0 0 0 transparent}
+  .eq-slot span{font-size:11px;font-weight:800;margin-top:1px}
+  .eq-sum{background:var(--rp-slot);box-shadow:inset 0 0 0 2px #2c2546;color:var(--rp-ink);font-weight:700}
+  .eq-sum b{color:#8ff0a4}
+  .eq-right{gap:8px}
+  .eq-bag{background:linear-gradient(180deg,var(--rp-p1),var(--rp-p2));border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000;padding:34px 8px 8px;position:relative}
+  .eq-bag::before{content:'창고';position:absolute;left:8px;top:6px;background:linear-gradient(180deg,var(--rp-gold2),var(--rp-gold));color:#2a1a08;font-weight:900;font-size:13px;padding:2px 10px;clip-path:var(--px)}
+  .eq-bag::after{content:attr(data-n);position:absolute;right:10px;top:8px;font-size:12px;font-weight:900;color:var(--rp-dim)}
+  .eq-cell{background:radial-gradient(circle at 50% 40%,#1a1530,var(--rp-slot) 80%);border:3px solid #2e2648;box-shadow:inset 0 0 0 1px #000,inset 0 -5px 8px rgba(0,0,0,.5)}
+  div.eq-cell{opacity:.55}
+  .eq-cell .up{right:3px;top:1px;color:#6dff8a;text-shadow:0 1px 0 #000,0 0 6px #2f8a3e}
+  .eq-slot.sel,.eq-cell.sel{outline:3px solid var(--rp-gold2);outline-offset:-3px;box-shadow:inset 0 0 0 2px #000,inset 0 0 18px rgba(242,210,122,.45)}
+  .eq-card{background:linear-gradient(180deg,var(--rp-p1),var(--rp-p2));color:var(--rp-ink);border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000}
+  .eq-card .sub2{color:var(--rp-dim)}
+  .eq-card .st{color:var(--rp-ink)}
+  .eq-card .st .plus{color:#7cf08f} .eq-card .st .minus{color:#ff7a6a}
+  .eq-card .nm .pic{background:var(--rp-slot);padding:3px;box-shadow:inset 0 0 0 2px #3a3152}
+  .eq-card .btns button{box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.25)}
+  .eq-tools button{clip-path:var(--px);border:0;font-weight:900;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.2)}
+  .eq-tools .sub{background:#3a3352;color:#ece4ff}
+  /* 기술 나무 */
+  #treeOv{background:radial-gradient(ellipse at 50% -10%,#2b2346,var(--rp-bg) 70%)}
+  .tr-head{background:linear-gradient(180deg,#221b3a,#161127);border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000;clip-path:var(--px);padding:4px 8px;box-sizing:border-box}
+  .tr-head h2{color:var(--rp-gold2);text-shadow:0 2px 0 #000}
+  .tr-head .sub2{color:var(--rp-dim);opacity:1}
+  .tr-wrap{border-radius:0;clip-path:var(--px);background:
+      linear-gradient(rgba(201,162,74,.07) 1px,transparent 1px) 0 0/32px 32px,linear-gradient(90deg,rgba(201,162,74,.07) 1px,transparent 1px) 0 0/32px 32px,
+      radial-gradient(ellipse at 50% 40%,#231c40,#110d1e 75%);
+    box-shadow:inset 0 0 0 3px var(--rp-gold),inset 0 0 0 5px #000,inset 0 0 50px rgba(0,0,0,.6)}
+  .tr-board .tray{display:none}
+  .tr-title{color:var(--rp-gold2);text-shadow:0 2px 0 #000,0 0 10px rgba(242,210,122,.3);opacity:1}
+  .tr-teach .face{border-radius:0;clip-path:var(--px);border:0;box-shadow:inset 0 0 0 3px var(--rp-gold),inset 0 0 0 5px #000}
+  .tr-teach .nm{color:var(--rp-ink)}
+  .tr-n{border-radius:0;clip-path:var(--px);border:0;background:radial-gradient(circle at 50% 40%,#1d1733,var(--rp-slot) 75%);box-shadow:inset 0 0 0 3px #4a3f6a,inset 0 0 0 5px #000}
+  .tr-n.can{border:0;box-shadow:inset 0 0 0 3px var(--rp-gold2),inset 0 0 0 5px #000}
+  .tr-n.has{border:0;background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--c) 70%,#fff 10%),color-mix(in srgb,var(--c) 55%,#000));box-shadow:inset 0 0 0 3px var(--rp-gold2),inset 0 0 0 5px #000,inset 0 0 14px rgba(255,255,255,.25)}
+  .tr-n.can:not(.has){animation:rpPulse 1s infinite alternate}
+  @keyframes rpPulse{from{filter:brightness(1)}to{filter:brightness(1.35) drop-shadow(0 0 6px rgba(242,210,122,.8))}}
+  .tr-n.on-sel{outline:3px solid #fff;outline-offset:2px}
+  .tr-n .pp{bottom:-11px} .tr-n .pp b{border-radius:0;background:#2c2546;box-shadow:0 0 0 1px #000} .tr-n .pp b.on{background:var(--rp-gold2)}
+  .tr-me{border-radius:0;clip-path:var(--px);border:0;background:radial-gradient(circle at 50% 40%,#3a2f60,#15112a);box-shadow:inset 0 0 0 4px var(--rp-gold2),inset 0 0 0 6px #000}
+  .tr-me img{height:88%}
+  .tr-c .bd{border-radius:0;border:3px dashed rgba(242,210,122,.45)}
+  .tr-c.chosen .bd{border:3px solid var(--rp-gold2)}
+  .tr-b .stamp{border-radius:0;clip-path:var(--px)}
+  .tr-side{background:linear-gradient(180deg,var(--rp-p1),var(--rp-p2));color:var(--rp-ink);border-radius:0;clip-path:var(--px);border:3px solid var(--rp-gold);box-shadow:inset 0 0 0 2px #000;padding:12px}
+  .tr-side::before{display:none}
+  .tr-side .lvt{color:var(--rp-gold2)} .tr-side .why{color:#ff8a7a}
+  .tr-side .ic .pic{background:var(--rp-slot);padding:4px;box-shadow:inset 0 0 0 2px #3a3152}
+  .tr-side .cls span{background:#2c2546;color:var(--rp-ink)}
+  .tr-side .sub{background:#3a3352;color:#ece4ff;clip-path:var(--px);border-radius:0}
+  @media (max-height:440px){ .eq-doll,.eq-bag{padding-top:24px} .eq-doll::before,.eq-bag::before{font-size:11px;top:4px;padding:1px 8px} .eq-bag::after{top:5px;font-size:11px} .eq-head{padding:2px 4px 2px 8px} .rp-x{width:32px;height:32px;font-size:17px} .eq-head .gold{padding:2px 8px} .eq-doll{grid-template-rows:repeat(3,56px) auto;grid-template-columns:56px 1fr 56px;gap:6px} .eq-slot{width:56px;height:56px} .eq-slot .pic{width:36px;height:36px} .eq-doll .me img{height:140px} .eq-head .pic{width:26px;height:26px} .eq-head h2{font-size:16px} #eqOv{padding-top:max(6px,env(safe-area-inset-top));padding-bottom:max(6px,env(safe-area-inset-bottom))} }
+  .learn{border-radius:0;clip-path:var(--px);background:#3f8f55;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.25)}
+  .learn:disabled{background:#2c2546;color:#7d7499;box-shadow:none}
 </style>
 </head>
 <body>
@@ -496,16 +570,26 @@ const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0
 const HR = { run: [4, 9, 1], walk: [4, 7, 1], idle: [2, 2, 1], punch: [2, 10, 0] };
 const K_YD = HERO_H / 132;
 // 시험판(2026-11-20): 유담을 미드저니 자세 4장(img/ydm) + 코드 움직임으로 그려요. false면 예전 그림
-const ASSET_V = 20261125;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
+const ASSET_V = 20261126;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
 const MJ_HERO = false, YDM = ['idle', 'run', 'punch', 'hurt'];
 // 새 주인공 (2026-11-21): 미드저니 --cref 자세 → 2배 해상도 픽셀 그림(img/h2), 몸짓은 코드로
-const NEW_HERO = true, H2 = { boy: ['idle', 'runA', 'runB', 'punch', 'hurt', 'ko', 'joy'], girl: ['idle', 'runA', 'runB', 'punch', 'joy'] }, H2RUN = { boy: 6, girl: 6 };   // 달리기 장수 (img/h2/<who>_r<n>.png)
+const FR2 = ['minjun', 'seoyeon', 'jiho', 'haeun', 'doyun', 'sua'];   // 친구들도 새 그림 (tools/make_friends2.py)
+const NEW_HERO = true, H2 = { boy: ['idle', 'runA', 'runB', 'punch', 'hurt', 'ko', 'joy'], girl: ['idle', 'runA', 'runB', 'punch', 'hurt', 'joy'], ...Object.fromEntries(FR2.map(k => [k, ['idle', 'punch', 'hurt', 'joy']])) },
+  H2RUN = { boy: 6, girl: 6, ...Object.fromEntries(FR2.map(k => [k, 6])) };
+// 새 주인공 화면 그림 (img/h2/ui_<who>_<ready|joy|tired>.png, tools/make_h2_ui.py)
+const isNewHero = id => NEW_HERO && !!H2[id];
+const kidFace = c => isNewHero(c.id) ? `img/h2/face_${c.id}.png` : kidPic(c);   // 상태창 얼굴 (tools/make_h2_faces.py)
+const kidImgNew = (id, f = 'ready') => NEW_HERO && H2[id] ? IMG[`h2/ui_${id}_${f}`] : null;   // 캔버스용
+const kidPic = (c, f = 'ready') => isNewHero(c.id) ? `img/h2/ui_${c.id}_${f}.png` : c.friend ? `img/ui/k_${c.id}.png` : `img/yd/ui_${f}.png`;
+const kidTint = c => isNewHero(c.id) || c.friend ? 'none' : (c.tint || 'none');   // 달리기 장수 (img/h2/<who>_r<n>.png)
 async function loadAll() {
   SPR = await fetch('img/sprites.json').then(r => r.json());
   for (const a in YD) for (let k = 0; k < YD[a][0]; k++) SPR[`yd/${a}_${k}`] = { ax: 110, ay: 178 };
   for (const a of ['run', 'idle', 'punch']) for (let k = 0; k < HR[a === 'walk' ? 'run' : a][0]; k++) SPR[`hr/${a}_${k}`] = { ax: 110, ay: 178 };
   for (const a of YDM) SPR['ydm/' + a] = { ax: 110, ay: 178 };
   for (const w in H2) for (const a of H2[w]) SPR[`h2/${w}_${a}`] = { ax: 110, ay: 178 };
+  for (const w in H2) SPR[`h2/face_${w}`] = { ax: 0, ay: 0 };
+  for (const w in H2) for (const f of ['ready', 'joy', 'tired']) SPR[`h2/ui_${w}_${f}`] = { ax: 0, ay: 0 };
   for (const w in H2RUN) for (let k = 0; k < H2RUN[w]; k++) SPR[`h2/${w}_r${k}`] = { ax: 110, ay: 178 };
   for (const n of ['cab_f', 'cab_open', 'cab_s', 'cab_door']) SPR['props/box_' + n] = { ax: 0, ay: 0 };
   for (const k in PROPS) { if (PROPS[k].box) { SPR[`props/box_${k}_f`] = SPR[`props/box_${k}_s`] = { ax: 0, ay: 0 }; } else SPR[(PROPS[k].rp ? 'rprops/' : 'props/') + k] = { ax: 0, ay: 0 }; }
@@ -564,7 +648,7 @@ const hasF = id => (S.friends || []).includes(id);
 // 고를 수 있는 캐릭터: 주인공 2명은 처음부터, 친구는 구하면 열려요 (그림은 나중에 캐릭터마다 바꿔요)
 const CHARS = [
   { id: 'boy',  name: '유담', role: '2학년 · 주인공', tint: '', w: 'punch', perk: '공격력 +10%', free: true },
-  { id: 'girl', name: '하람', role: '2학년 · 주인공', tint: 'hue-rotate(300deg) saturate(1.3)', w: 'punch', perk: '빠르기 +10%', free: true, wip: true },
+  { id: 'girl', name: '하람', role: '2학년 · 주인공', tint: 'hue-rotate(300deg) saturate(1.3)', w: 'punch', perk: '빠르기 +10%', free: true },
   ...FRIENDS.map((f, i) => ({ id: f.id, name: f.name, role: f.role, tint: f.tint, w: ['boom', 'recorder', 'ball', 'eraser', 'bolt', 'plane'][i], friend: true })),
 ];
 const isOpen = c => c.free || hasF(c.id);
@@ -1594,7 +1678,7 @@ const KID_TALK = {
 const KID_ANY = { lament: ['으앙 무서웠어… 큐브 안에서 내 숨소리만 들렸어.', '급식 시간 지났지? 오늘 메뉴 돈가스였는데…'], tip: '괴물이 모여 있는 방에는 꼭 뭔가 좋은 게 있더라.' };
 function kidTalk(c) {
   const f = c.f, K = (f && KID_TALK[f.id]) || KID_ANY, nm = f ? f.name : '반 친구';
-  const img = `img/ui/k_${f ? f.id : pick(['minjun', 'seoyeon', 'jiho', 'haeun', 'doyun', 'sua'])}.png`, col = '#ff9ec7';
+  const kid0 = f ? f.id : pick(FR2), img = isNewHero(kid0) ? `img/h2/face_${kid0}.png` : `img/ui/k_${kid0}.png`, col = '#ff9ec7';
   const hints = kidHints(), L = (t, w = 'kid') => ({ w, t, name: w === 'kid' ? nm : undefined, img: w === 'kid' ? img : undefined, col });
   const lines = [L(`${callName(charOf().name)}!! 살았다… 고마워!`), L(pick(K.lament)), { w: 'me', t: pick(['어… 고생 많았네.', '그, 그랬구나…', '푸핫. 아니 미안, 힘들었겠다.']), f: 'joy' }, L(hints.length ? pick(hints) : K.tip), L(K.tip)];
   if (f) lines.push(L(`나도 교실로 돌아가서 도울게! (${f.perk})`));
@@ -1665,7 +1749,7 @@ function drawCage(c, part) {
   if (free && c.t > 2.4) return;
   if (part === 'kid') {
   shadow(x, y + 4, 52);
-  const kim = c.f && IMG['ui/k_' + c.f.id];
+  const kim = c.f && (kidImgNew(c.f.id, c.st === 'free' ? 'joy' : 'tired') || IMG['ui/k_' + c.f.id]);
   if (kim) {   // 친구 그림: 갇혀서 동동 / 풀려나면 폴짝
     const hop = free ? -Math.abs(Math.sin(c.t * 9)) * 18 - c.t * 30 : -Math.abs(Math.sin(c.t * 3)) * 3, H = 112, W = kim.width * H / kim.height;
     const sq = free ? 1 : 1 + Math.sin(c.t * 6) * 0.02;
@@ -1803,8 +1887,8 @@ function undoLearn() {
 function treeLayout() {
   const deg = d => d * Math.PI / 180, pol = (a, r) => [Math.cos(a) * r, Math.sin(a) * r];
   const items = [{ kind: 'me', p: [0, 0] }];
-  const common = Object.keys(UPG).filter(k => !UPG[k].cls), gaps = [-54, 18, 162, 234];
-  common.forEach((k, i) => items.push({ kind: 'n', k, p: pol(deg(gaps[i]), 96), from: [0, 0], own: () => true }));
+  const common = Object.keys(UPG).filter(k => !UPG[k].cls), gaps = [-54, 18, 162, 234, 90];   // 동아리 가지 사이사이 (5개 넘으면 고르게)
+  common.forEach((k, i) => items.push({ kind: 'n', k, p: pol(deg(gaps[i] ?? (i * 360 / common.length)), 96), from: [0, 0], own: () => true }));
   CLS_ORDER.forEach((c, i) => {
     const a = deg(-90 + i * 72), badge = pol(a, 138);
     items.push({ kind: 'c', c, p: badge, from: [0, 0] });
@@ -1838,7 +1922,7 @@ function renderTree() {
   for (const it of L.items) {
     const [x, y] = it.p;
     if (it.kind === 'me') {
-      html += `<div class="tr-me" style="left:${x}px;top:${y}px"><img src="img/yd/ui_ready.png" style="filter:${charOf().tint || 'none'}" alt=""><b>Lv ${P.lv}</b></div>`;
+      html += `<div class="tr-me" style="left:${x}px;top:${y}px"><img src="${kidFace(charOf())}" style="filter:${kidTint(charOf())}" alt=""><b>Lv ${P.lv}</b></div>`;
     } else if (it.kind === 'c') {
       const C = CLASSES[it.c], st = P.cls === it.c ? 'chosen' : P.cls ? 'other' : P.lv >= 5 ? 'pick' : 'wait';
       svg += line(it.from, it.p, P.cls === it.c, C.col);
@@ -2061,18 +2145,18 @@ function renderEquip() {
         : `<button id="eqOn" style="background:#4E9A63">끼기</button><button id="eqSell" style="background:#b8862a">팔기 · 금화 ${sellValue(cur)}</button>`}</div>`;
   } else card = `<div class="st">🎒 탐험에서 주운 장비가 가방에 들어와요. 괴물(특히 중간 보스)이 떨어뜨려요.<br>장비를 눌러 지금 낀 것과 비교하고 <b>끼기</b>를 눌러요. <span style="color:#2f8a3e;font-weight:900">▲</span> 표시는 더 좋은 장비예요.</div>`;
   box.innerHTML = `
-    <div class="eq-head">${PIC('bagicon')}<h2>장비</h2><span style="font-size:12px;opacity:.75">가방 ${S.bag.length}/${BAG_MAX}</span><span class="gold">${PIC('coin', 'mini')} ${gold}</span></div>
+    <div class="eq-head">${PIC('bagicon')}<h2>장비 · 창고</h2><span class="gold">${PIC('coin', 'mini')} ${gold}</span><button class="rp-btn rp-x" id="eqX" aria-label="닫기">✕</button></div>
     <div class="eq-body">
       <div class="eq-doll">
-        ${slotBtn('head')}<div class="me"><img src="${charOf().id === 'girl' ? 'img/ui/k_haram.png' : charOf().friend ? `img/ui/k_${charOf().id}.png` : 'img/yd/ui_ready.png'}" alt=""></div>${slotBtn('feet')}
+        ${slotBtn('head')}<div class="me"><img src="${kidPic(charOf())}" style="filter:${kidTint(charOf())}" alt=""></div>${slotBtn('feet')}
         ${slotBtn('body')}${slotBtn('bag')}
         ${slotBtn('hand')}${slotBtn('acc')}
         <div class="eq-sum">${sum}</div>
       </div>
       <div class="eq-right">
-        <div class="eq-bag">${cells}</div>
+        <div class="eq-bag" data-n="${S.bag.length} / ${BAG_MAX}">${cells}</div>
         <div class="eq-card">${card}</div>
-        <div class="eq-tools"><button class="sub" id="eqBest">▲ 좋은 것 끼기</button><button class="sub" id="eqJunk">일반 다 팔기</button><button class="big" id="eqClose" style="font-size:15px;padding:9px 0">닫기</button></div>
+        <div class="eq-tools"><button class="sub" id="eqBest">▲ 좋은 것 끼기</button><button class="sub" id="eqJunk">일반 다 팔기</button></div>
       </div>
     </div>`;
   // 칸 순서를 인형 기준으로: 왼쪽 머리·옷·장갑, 오른쪽 신발·가방·장신구
@@ -2089,7 +2173,7 @@ function renderEquip() {
   box.querySelector('#eqJunk').onclick = () => { const junk = S.bag.filter(x => x.r === 0 && itemScore(x) <= itemScore(S.equip[x.slot]));
       let v = 0; for (const it of junk) { v += sellValue(it); S.bag.splice(S.bag.indexOf(it), 1); } if (eqv.from === 'game') run.gold += v; else S.gold += v;
       save(); toast(junk.length ? `${junk.length}개 팔고 금화 +${v}` : '팔 일반 장비가 없어요'); eqv.sel = null; renderEquip(); };
-  box.querySelector('#eqClose').onclick = closeEquip;
+  box.querySelector('#eqX').onclick = closeEquip;
 }
 
 // ════════════════ 한 프레임 ════════════════
@@ -2961,7 +3045,7 @@ function mjHeroKey(a, el) {
   return null;
 }
 function newHeroKey(a, el) {
-  const now = performance.now() / 1000, who = S.char === 'girl' ? 'girl' : 'boy', has = p => H2[who].includes(p), K = p => `h2/${who}_${has(p) ? p : 'idle'}`;
+  const now = performance.now() / 1000, who = H2[S.char] ? S.char : 'boy', has = p => H2[who].includes(p), K = p => `h2/${who}_${has(p) ? p : 'idle'}`;
   HM.sx = HM.sy = 1; HM.rot = HM.dy = HM.dx = 0;
   if (a === 'idle' || a === 'tired') { const b = Math.sin(now * (a === 'tired' ? 5 : 2.6)); HM.sy = 1 + b * 0.02; HM.sx = 1 - b * 0.012; if (a === 'tired') { HM.rot = 0.06; HM.dy = 2; } return K('idle'); }
   if (a === 'walk' || a === 'run' || a === 'walkf' || a === 'walkb') {   // 달리기 그림 여러 장을 차례로, 장마다 살짝 떴다 내려앉아요
@@ -2982,7 +3066,7 @@ function newHeroKey(a, el) {
 function heroKey() {
   const [a, t] = heroAnim(), now = performance.now() / 1000;
   if (ANIM.name !== a) { ANIM.name = a; ANIM.t0 = now; }
-  if (NEW_HERO && (S.char === 'boy' || S.char === 'girl') && IMG[`h2/${S.char}_idle`]) { const k = newHeroKey(a, t == null ? now - ANIM.t0 : t); if (k) return k; }
+  if (isNewHero(S.char) && IMG[`h2/${S.char}_idle`]) { const k = newHeroKey(a, t == null ? now - ANIM.t0 : t); if (k) return k; }
   if (MJ_HERO && S.char !== 'girl' && IMG['ydm/idle']) { const k = mjHeroKey(a, t == null ? now - ANIM.t0 : t); if (k) return k; }
   if (S.char === 'girl' && HR[a] && IMG['hr/idle_0']) {   // 하람 전용 그림
     const [n, fps, loop] = HR[a], el = t == null ? now - ANIM.t0 : t * (a === 'run' ? 0.75 : 1);
@@ -3282,9 +3366,13 @@ function drawHUD() {
   // 얼굴
   const fx0 = pad + 7 * u, fy0 = by + 7 * u, fs = ph - 14 * u;
   px(fx0, fy0, fs, fs, '#2a2340'); ctx.strokeStyle = '#000'; ctx.lineWidth = 2 * u; ctx.strokeRect(fx0, fy0, fs, fs);
-  { const im = S.char === 'boy' ? IMG['yd/ui_ready'] : IMG['ui/' + (S.char === 'girl' ? 'k_haram' : 'k_' + S.char)];
+  { const fc = isNewHero(S.char) && IMG[`h2/face_${S.char}`];
+    if (fc) { const k = Math.min((fs - 2 * u) / fc.width, (fs - 2 * u) / fc.height), w = fc.width * k, h = fc.height * k;
+      ctx.save(); ctx.beginPath(); ctx.rect(fx0, fy0, fs, fs); ctx.clip(); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(fc, fx0 + (fs - w) / 2, fy0 + fs - 1 * u - h, w, h); ctx.restore(); } else {
+{ const im = isNewHero(S.char) && IMG[`h2/ui_${S.char}_ready`] ? IMG[`h2/ui_${S.char}_ready`] : S.char === 'boy' ? IMG['yd/ui_ready'] : IMG['ui/' + (S.char === 'girl' ? 'k_haram' : 'k_' + S.char)];
     if (im) { const sh = im.height * 0.42, sw = Math.min(im.width, sh); ctx.save(); ctx.beginPath(); ctx.rect(fx0, fy0, fs, fs); ctx.clip(); ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(im, (im.width - sw) / 2, 0, sw, sh, fx0 + 1 * u, fy0 + 1 * u, fs - 2 * u, fs - 2 * u); ctx.restore(); } }
+      ctx.drawImage(im, (im.width - sw) / 2, 0, sw, sh, fx0 + 1 * u, fy0 + 1 * u, fs - 2 * u, fs - 2 * u); ctx.restore(); } } } }
   // Lv 뱃지
   const lvx = fx0 - 2 * u, lvy = fy0 + fs - 12 * u;
   px(lvx, lvy, 30 * u, 14 * u, '#ffd54f'); ctx.fillStyle = '#3a2410'; ctx.font = `bold ${10 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(`Lv${P.lv}`, lvx + 15 * u, lvy + 10.5 * u);
@@ -3392,7 +3480,7 @@ function renderHub() {
     <div class="selTop"><button class="sub" id="ttlBtn">◀ 처음 화면</button><h2>우리 반 교실</h2><button class="sub" id="msBtn" style="border:2px solid #3f6f68;background:#24202f">📋 미션 · 단서 ${(S.clues || []).length}/${CLUES.length} · 친구 ${S.friends.length}/${FRIENDS.length}${S.wins ? ' · 큐브 ✔' : ''}</button></div>
     <div class="hub">
       <div class="pane hero">
-        <div class="heroTop"><img src="img/yd/ui_ready.png" style="filter:${charOf().tint || 'none'}" alt="">
+        <div class="heroTop"><img src="${kidFace(charOf())}" style="filter:${kidTint(charOf())}" alt="">
           <div style="flex:1;text-align:left"><div class="lvl">${charOf().name} <span style="font-size:15px;opacity:.8">Lv ${S.lv}</span></div>
             <div class="bar"><i style="width:${Math.min(100, S.xp / need * 100)}%"></i></div>
             <div class="stats">❤️ ${st.maxHp} · 💪 ${Math.round(st.dmg * 100)}% · 👟 ${Math.round(st.speed)}<br>🎯 치명타 ${Math.round(st.crit * 100)}% · ⏱ 공속 +${Math.round((1 - st.cd) * 100)}%<br>🏆 최고 ${S.best ? (S.best > FLOORS ? '학교 구출!' : S.best + '층') : '-'}</div></div></div>
@@ -3407,7 +3495,7 @@ function renderHub() {
       <div class="pane frs">
         <div style="display:flex;justify-content:space-between;align-items:center"><b>🤝 구출한 친구들</b> <span style="font-size:11px;opacity:.7">구하면 캐릭터로 고를 수 있어요</span><span style="font-size:13px;opacity:.8">${S.friends.length}/${FRIENDS.length}</span></div>
         <div class="fr-grid">${FRIENDS.map(f => hasF(f.id)
-          ? `<div class="fr on"><img src="img/ui/k_${f.id}.png" style="image-rendering:pixelated" alt=""><div><b>${f.name}</b> <span>${f.role}</span><div>${f.perk}</div></div></div>`
+          ? `<div class="fr on"><img src="${isNewHero(f.id) ? `img/h2/ui_${f.id}_ready.png` : `img/ui/k_${f.id}.png`}" style="image-rendering:pixelated" alt=""><div><b>${f.name}</b> <span>${f.role}</span><div>${f.perk}</div></div></div>`
           : `<div class="fr"><div class="q">❓</div><div><b>???</b><div>층 어딘가에 갇혀 있어요</div></div></div>`).join('')}</div>
       </div>
     </div>`;
@@ -3683,9 +3771,15 @@ function drawUfo(g, t, x, y) {
   g.restore();
 }
 function drawTitleHero(g, t, dusk) {
+  const s = 160 / 132;   // 서 있는 키 160
+  if (isNewHero(S.char) && IMG[`h2/${S.char}_idle`]) {   // 새 주인공: 걸어 들어올 땐 달리기 그림, 서면 숨쉬기
+    const who = S.char, n = H2RUN[who], im = TT.shown ? IMG[`h2/${who}_idle`] : IMG[`h2/${who}_r${Math.floor(t * 9) % n}`] || IMG[`h2/${who}_idle`];
+    const br = TT.shown ? Math.sin(t * 2.6) * 0.02 : 0, hop = TT.shown ? 0 : Math.abs(Math.sin(t * 9 * Math.PI)) * 4;
+    g.save(); g.filter = `brightness(${1 - dusk * 0.35})`; g.imageSmoothingEnabled = false;
+    g.translate(TT.hx, 690 - hop); g.scale(s * (1 - br * 0.6), s * (1 + br)); g.drawImage(im, -110, -178); g.restore(); return;
+  }
   const key = TT.shown ? `yd/idle_${Math.floor(t * 4) % 4}` : `yd/walk_${Math.floor(t * 10) % 8}`;
   const im = IMG[key] || IMG['yd/idle_0']; if (!im) return;
-  const s = 160 / 132;   // 서 있는 키 160
   g.save(); g.filter = (charOf().tint || '') + ` brightness(${1 - dusk * 0.35})`;
   g.drawImage(im, TT.hx - 110 * s, 690 - 178 * s, im.width * s, im.height * s); g.restore();
 }
@@ -3700,8 +3794,8 @@ function renderSelect() {
   const c = CHARS.find(x => x.id === selId), ok = isOpen(c);
   const wl = c.w === 'punch' ? '👊 주먹' : `${UPG[c.w].ic} ${UPG[c.w].name} + 👊 주먹`;
   const fr = c.friend ? FRIENDS.find(f => f.id === c.id) : null;
-  const kidImg = x => x.id === 'girl' ? 'img/ui/k_haram.png' : x.friend ? `img/ui/k_${x.id}.png` : 'img/yd/ui_ready.png';
-  const pic = (x, o) => `<img src="${kidImg(x)}" style="image-rendering:pixelated;filter:${o ? (kidImg(x).includes('/ui/') ? 'none' : (x.tint || 'none')) : 'brightness(0) opacity(.55)'}" alt="">`;
+  const kidImg = x => kidPic(x);
+  const pic = (x, o) => `<img src="${kidImg(x)}" style="image-rendering:pixelated;filter:${o ? kidTint(x) : 'brightness(0) opacity(.55)'}" alt="">`;
   const el = document.getElementById('selectOv');
   el.innerHTML = `
     <div class="selTop"><button class="sub" id="selBack">◀ ${selFrom === 'hub' ? '교실로' : '처음 화면'}</button><h2>누구로 할까요?</h2><span style="width:90px"></span></div>
@@ -3866,8 +3960,8 @@ function talk(lines, done) {
     const L = lines[i], who = WHO[L.w] || WHO.narr, me = L.w === 'me', narr = L.w === 'narr';
     const name = L.name || (me ? charOf().name : L.w === 'npc' ? npcName() : who.name), text = L.t.replace(/\{me\}/g, charOf().name);
     const npcPic = L.img ? `<div class="tk-radio port${L.w === 'alien' ? ' alien' : ''}" style="--c:${L.col || '#9b5cff'}"><img src="${L.img}" alt="" style="image-rendering:pixelated;max-width:100%;max-height:100%;filter:${L.tint || 'none'}"></div>`
-      : L.w === 'npc' ? `<div class="tk-radio port" style="--c:${who.col}">${PIC(npcImg())}</div>` : '';
-    const face = npcPic ? npcPic : me ? `<img class="tk-me" src="img/yd/ui_${L.f || 'ready'}.png" style="filter:${charOf().tint || 'none'}" alt="">`
+      : L.w === 'npc' ? `<div class="tk-radio port" style="--c:${who.col}">${isNewHero(npcId()) ? `<img class="pic" src="img/h2/face_${npcId()}.png" alt="">` : PIC(npcImg())}</div>` : '';
+    const face = npcPic ? npcPic : me ? `<img class="tk-me" src="${kidPic(charOf(), L.f || 'ready')}" style="filter:${kidTint(charOf())}" alt="">`
       : (!narr ? (TPORT[L.w] ? `<div class="tk-radio port" style="--c:${who.col}">${PIC(TPORT[L.w])}<b>${PIC('radio', 'mini')}</b></div>` : `<div class="tk-radio" style="--c:${who.col}"><span>${PIC('radio')}</span><b>${T_ICON[L.w] || '📡'}</b></div>`) : '');
     el.innerHTML = `
       <button class="skip" id="tkSkip">건너뛰기 ▶▶</button>
@@ -3915,6 +4009,7 @@ function giveClue() {
 const callName = n => n + (((n.charCodeAt(n.length - 1) - 0xAC00) % 28) ? '아' : '야');   // 유담아 · 지호야
 const npcName = () => S.char === 'girl' ? '민준' : '하람';
 const npcImg = () => S.char === 'girl' ? 'k_minjun' : 'k_haram';
+const npcId = () => S.char === 'girl' ? 'minjun' : 'girl';
 const QUEST = [
   { id: 'cab', txt: '사물함·책상 서랍 뒤져 보기 (앞에 잠깐 서 있기)' },
   { id: 'bag', txt: '오른쪽 위 가방 단추로 장비 보기' },
@@ -3984,7 +4079,7 @@ function updateNpc(dt) {
   const q = run.quest; if (q && !q.done && QUEST[q.step].id === 'kill' && run.kills - q.kills0 >= QUEST[q.step].n) questEv('kill');
 }
 function drawNpc(n) {
-  const im = IMG['ui/' + npcImg()]; if (!im) return;
+  const im = kidImgNew(npcId()) || IMG['ui/' + npcImg()]; if (!im) return;
   shadow(n.x, n.y + 2, 26);
   const H = 104, W = im.width * H / im.height, hop = n.talked ? 0 : Math.abs(Math.sin(n.t * 5)) * 6;
   ctx.save(); ctx.imageSmoothingEnabled = false; ctx.translate(n.x, n.y - hop); ctx.scale(P.x - P.y > n.x - n.y ? -1 : 1, 1); ctx.drawImage(im, -W / 2, -H, W, H); ctx.restore();

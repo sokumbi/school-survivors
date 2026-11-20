@@ -52,8 +52,8 @@ def peel_shadow(a):
     return a
 
 
-def pixel_art(im, width, px=2, colors=48, sat=1.15):
-    a = peel_shadow(np.asarray(im.convert('RGBA')))
+def pixel_art(im, width, px=2, colors=48, sat=1.15, peel=True):
+    a = np.asarray(im.convert('RGBA')); a = peel_shadow(a) if peel else a
     ys, xs = np.where(a[..., 3] > 0)
     a = a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     h0, w0 = a.shape[:2]
