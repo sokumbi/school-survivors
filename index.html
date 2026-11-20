@@ -407,10 +407,13 @@ const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0
 // 하람 전용 동작 (없는 동작은 유담 그림에 하람 색을 입혀 써요)
 const HR = { run: [4, 9, 1], walk: [4, 7, 1], idle: [2, 2, 1], punch: [2, 10, 0] };
 const K_YD = HERO_H / 132;
+// 시험판(2026-11-20): 유담을 미드저니 자세 4장(img/ydm) + 코드 움직임으로 그려요. false면 예전 그림
+const MJ_HERO = true, YDM = ['idle', 'run', 'punch', 'hurt'];
 async function loadAll() {
   SPR = await fetch('img/sprites.json').then(r => r.json());
   for (const a in YD) for (let k = 0; k < YD[a][0]; k++) SPR[`yd/${a}_${k}`] = { ax: 110, ay: 178 };
   for (const a of ['run', 'idle', 'punch']) for (let k = 0; k < HR[a === 'walk' ? 'run' : a][0]; k++) SPR[`hr/${a}_${k}`] = { ax: 110, ay: 178 };
+  for (const a of YDM) SPR['ydm/' + a] = { ax: 110, ay: 178 };
   for (const n of ['cab_f', 'cab_open', 'cab_s', 'cab_door']) SPR['props/box_' + n] = { ax: 0, ay: 0 };
   for (const k in PROPS) { if (PROPS[k].box) { SPR[`props/box_${k}_f`] = SPR[`props/box_${k}_s`] = { ax: 0, ay: 0 }; } else SPR['props/' + k] = { ax: 0, ay: 0 }; }
   for (const k of TILE_IMGS) SPR['tiles/' + k] = { ax: 0, ay: 0 };
@@ -2238,9 +2241,41 @@ function heroAnim() {
   }   // 걷기는 보폭이 짧아 더 빨리 넘겨요
   return [P.hp < P.maxHp * 0.3 ? 'tired' : 'idle', null];
 }
+// 미드저니 자세 한 장에 몸짓을 코드로 입혀요: 숨쉬기, 걸음마다 디딤·떠오름, 앞으로 기울기, 맞으면 뒤로 젖힘
+const HM = { sx: 1, sy: 1, rot: 0, dy: 0, dx: 0 };
+function mjHeroKey(a, el) {
+  const now = performance.now() / 1000;
+  HM.sx = HM.sy = 1; HM.rot = HM.dy = HM.dx = 0;
+  if (a === 'idle' || a === 'tired') {
+    const b = Math.sin(now * (a === 'tired' ? 5 : 2.6));
+    HM.sy = 1 + b * 0.018; HM.sx = 1 - b * 0.01; if (a === 'tired') HM.rot = 0.05;
+    return 'ydm/idle';
+  }
+  if (a === 'walk' || a === 'run' || a === 'walkf' || a === 'walkb') {
+    // 한 걸음 = 디딤(벌린 다리) → 지나감(모은 다리, 붕 뜸)
+    const ph = P.walkT / (4 / 12) * (a === 'run' ? 1 : 1.2), st = ph % 1, stride = Math.floor(ph) % 2 === 0;
+    const run = a === 'run';
+    HM.rot = (run ? 0.09 : 0.04);
+    if (stride) { const c = Math.sin(st * Math.PI); HM.sy = 1 - c * 0.05; HM.sx = 1 + c * 0.035; HM.dy = 0; return 'ydm/run'; }
+    HM.dy = -Math.sin(st * Math.PI) * (run ? 7 : 4); HM.sy = 1.025; HM.sx = 0.985;
+    return 'ydm/idle';
+  }
+  if (a === 'punch' || a === 'dash') {
+    const k = Math.min(1, (el || 0) / 0.08);   // 처음엔 살짝 웅크렸다가 쭉
+    HM.sx = 0.92 + k * 0.1; HM.sy = 1.04 - k * 0.04; HM.rot = 0.06 * (1 - k) + (a === 'dash' ? 0.12 : 0);
+    return a === 'dash' ? 'ydm/run' : 'ydm/punch';
+  }
+  if (a === 'hurt' || a === 'trip' || a === 'dizzy') {
+    const k = Math.max(0, 1 - (el || 0) / 0.35);
+    HM.rot = -0.22 * k; HM.dx = -6 * k + Math.sin(now * 60) * 2 * k; HM.sy = 1 - 0.04 * k;
+    return 'ydm/hurt';
+  }
+  return null;
+}
 function heroKey() {
   const [a, t] = heroAnim(), now = performance.now() / 1000;
   if (ANIM.name !== a) { ANIM.name = a; ANIM.t0 = now; }
+  if (MJ_HERO && S.char !== 'girl' && IMG['ydm/idle']) { const k = mjHeroKey(a, t == null ? now - ANIM.t0 : t); if (k) return k; }
   if (S.char === 'girl' && HR[a] && IMG['hr/idle_0']) {   // 하람 전용 그림
     const [n, fps, loop] = HR[a], el = t == null ? now - ANIM.t0 : t * (a === 'run' ? 0.75 : 1);
     let k = Math.floor(el * fps); k = loop ? ((k % n) + n) % n : Math.max(0, Math.min(n - 1, k));
@@ -2251,13 +2286,19 @@ function heroKey() {
   k = loop ? ((k % n) + n) % n : Math.max(0, Math.min(n - 1, k));
   return `yd/${a}_${k}`;
 }
-const kOf = key => key.startsWith('yd/') || key.startsWith('hr/') ? K_YD : key.startsWith('h2_') ? K_BARE : K_BAT;
+const kOf = key => key.startsWith('yd/') || key.startsWith('hr/') || key.startsWith('ydm/') ? K_YD : key.startsWith('h2_') ? K_BARE : K_BAT;
 function drawHero() {
   shadow(P.x, P.y, 30);
   const key = heroKey(), blink = P.inv > 0 && P.hp > 0 && P.dashT <= 0 && P.ultT <= 0 && Math.floor(P.inv * 20) % 2;
   // 발이 땅을 디딜 때마다 살짝 통통 (8장 한 바퀴에 두 걸음)
   const bob = P.stepping ? Math.abs(Math.sin(P.walkT / (8 / 12) * Math.PI * 2)) * 3 : 0;
   const lg = P.lunge > 0 ? Math.sin(P.lunge / 0.14 * Math.PI) * 9 * P.face : 0;   // 휘두를 때 앞으로 쑥
+  if (key.startsWith('ydm/')) {
+    const im = IMG[key], k = K_YD, f = P.face;
+    ctx.save(); ctx.translate(P.x + lg + HM.dx * f, P.y + HM.dy); ctx.rotate(HM.rot * f); ctx.scale(f * k * HM.sx, k * HM.sy);
+    ctx.globalAlpha = blink ? 0.45 : 1; ctx.imageSmoothingEnabled = false; ctx.drawImage(im, -110, -178); ctx.restore();
+    drawHeroHp(); return;
+  }
   drawSprite(key, P.x + lg, P.y - bob, kOf(key), key.startsWith('yd/walk') && key[7] !== '_' ? 1 : P.face, blink ? 0.45 : 1, false, key.startsWith('hr/') ? undefined : charOf().tint || undefined);
   drawHeroHp();
 }
