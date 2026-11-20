@@ -496,7 +496,7 @@ const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0
 const HR = { run: [4, 9, 1], walk: [4, 7, 1], idle: [2, 2, 1], punch: [2, 10, 0] };
 const K_YD = HERO_H / 132;
 // 시험판(2026-11-20): 유담을 미드저니 자세 4장(img/ydm) + 코드 움직임으로 그려요. false면 예전 그림
-const ASSET_V = 20261123;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
+const ASSET_V = 20261124;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
 const MJ_HERO = false, YDM = ['idle', 'run', 'punch', 'hurt'];
 async function loadAll() {
   SPR = await fetch('img/sprites.json').then(r => r.json());
@@ -522,7 +522,7 @@ const SLOT_MAIN = { head: 'hp', body: 'hp', hand: 'atk', feet: 'spd', bag: 'mag'
 const BAG_MAX = 20;
 // 16비트 아이콘 (드리미나 시트 → tools/cut_icons.py → img/ui). HTML에선 PIC(이름), 캔버스에선 IMG['ui/이름']
 const PIC = (n, cls = '') => `<img class="pic ${cls}" src="img/ui/${n}.png" alt="" draggable="false">`;
-const UI_IMGS = ['punch', 'shoes', 'magnet', 'note', 'bat', 'power', 'ball', 'guard', 'boom', 'alarm', 'eraser', 'aim', 'recorder', 'milk', 'bandage', 'vitamin',
+const UI_IMGS = ['punch', 'shoes', 'magnet', 'note', 'flash', 'bat', 'power', 'ball', 'guard', 'boom', 'alarm', 'eraser', 'aim', 'recorder', 'milk', 'bandage', 'vitamin',
   'plane', 'ink', 'book', 'quick', 'paint', 'crayon', 'bolt', 'palette', 'club_war', 'club_arch', 'club_heal', 'club_sum', 'club_mag', 'gem', 'coin', 'heart',
   'radio', 'dash', 'star', 'lock', 't_pe', 't_math', 't_nurse', 't_kor', 't_art', 't_home', 'k_haram', 'k_minjun', 'k_seoyeon', 'k_jiho', 'k_haeun', 'k_doyun', 'k_sua',
   'p_eraser', 'p_ball', 'p_ruler', 'p_plane', 'p_book', 'p_chalk', 'p_cube', 'locker', 'locker_open', 'stairs', 'p_burst', 'p_spark',
@@ -585,6 +585,7 @@ const STAT = {
   crit:  { n: '치명타',   u: '%',   lo: 3,   hi: 7 },
   mag:   { n: '자석',     u: '%',   lo: 10,  hi: 25 },
   regen: { n: '회복',     u: '/초', lo: 0.3, hi: 0.8, dec: 1 },
+  light: { n: '시야',     u: '%',   lo: 5,   hi: 10 },
 };
 const RAR = [
   { n: '일반', c: '#c8c8c8', k: 1, m: 1 },
@@ -601,6 +602,7 @@ const UNIQUES = [
   { slot: 'feet', name: '번개 롤러 운동화',       img: 'i_roller',   ic: '🛼', stats: { spd: 16, cd: 10, mag: 30 } },
   { slot: 'body', name: '큐브 방어 교복',         img: 'i_blazer',   ic: '🧥', stats: { hp: 55, atk: 12, regen: 1 } },
   { slot: 'bag',  name: '무한 도시락 가방',       img: 'i_lunchbag', ic: '🍱', stats: { hp: 30, regen: 2, mag: 45 } },
+  { slot: 'head', name: '반짝 손전등 헬멧',       img: 'i_helmet',   ic: '🔦', stats: { hp: 30, light: 25, crit: 5 } },
 ];
 function makeUnique() {
   const own = new Set([...Object.values(S.equip), ...S.bag].filter(Boolean).map(i => i.name));
@@ -635,7 +637,7 @@ function makeItem(minR = 0) {
 const itemScore = it => it ? Object.entries(it.stats).reduce((a, [k, v]) => a + v / STAT[k].hi, 0) : 0;
 const statText = it => Object.entries(it.stats).map(([k, v]) => `${STAT[k].n} +${v}${STAT[k].u}`).join(' · ');
 function equipTotals() {
-  const t = { atk: 0, hp: 0, spd: 0, cd: 0, crit: 0, mag: 0, regen: 0 };
+  const t = { atk: 0, hp: 0, spd: 0, cd: 0, crit: 0, mag: 0, regen: 0, light: 0 };
   for (const s in S.equip) if (S.equip[s]) for (const [k, v] of Object.entries(S.equip[s].stats)) t[k] += v;
   return t;
 }
@@ -650,6 +652,7 @@ function baseStats() {
     cd: Math.max(0.5, 1 - e.cd / 100),
     crit: 0.05 + e.crit / 100,
     regen: e.regen,
+    light: e.light || 0,
   };
 }
 
@@ -750,6 +753,7 @@ const UPG = {
   shoes:  { t: 'home', name: '실내화',        ic: '👟', max: 4, desc: () => '더 빨리 달려요' },
   magnet: { t: 'home', name: '자석 필통',     ic: '🧲', max: 3, desc: () => '보석을 더 멀리서 끌어와요' },
   note:   { t: 'home', name: '복습 노트',     ic: '📒', max: 3, desc: () => '경험치 +10%' },
+  flash:  { t: 'home', name: '손전등',        ic: '🔦', max: 3, desc: () => '밝게 보이는 범위가 넓어져요 (+12%)' },
   // 전사 (체육 선생님)
   bat:    { cls: 'war', t: 'pe', name: '야구방망이', ic: '🏏', max: 5, w: 1, desc: () => '방망이가 더 세고 넓어져요' },
   power:  { cls: 'war', t: 'pe', req: 'bat', name: '팔굽혀펴기', ic: '💪', max: 5, desc: () => '모든 공격 피해 +12%' },
@@ -2525,6 +2529,35 @@ function drawCubeFloor(v) {
   }
 }
 // 화면 분위기: 층 색 + 보스전엔 가장자리부터 어둡게, 붉게 두근두근
+// 시야: 내 주변만 밝고 멀수록 어두워요. 지나간 곳은 살짝 보이고, 안 가 본 곳은 깜깜
+const DARK = { s: 0.25, m: null, e: null, R: 360, seen: 0.42, base: 0.95 };
+// 시야 넓이: 손전등 기술(단계마다 +12%), 장비 '시야', 미술 동아리. 아무리 모아도 1.6배까지만
+const lightMul = () => Math.min(1.6, 1 + 0.12 * (P.w.flash || 0) + (B.light || 0) / 100 + (P.cls === 'mag' ? 0.1 : 0));
+function drawDarkness(W, H, z, v) {
+  const s = DARK.s, w = Math.ceil(W * s), h = Math.ceil(H * s);
+  if (!DARK.m) { DARK.m = document.createElement('canvas'); DARK.e = document.createElement('canvas'); }
+  const m = DARK.m, e = DARK.e; if (m.width !== w || m.height !== h) { m.width = e.width = w; m.height = e.height = h; }
+  const g = m.getContext('2d'), ge = e.getContext('2d'), k = z * s;
+  const SX = (x, y, lift = 0) => [(isoX(x, y) - view.x) * k, (isoY(x, y) - lift - view.y) * k];
+  // 1) 가 본 곳 모양
+  ge.clearRect(0, 0, w, h); ge.fillStyle = '#fff';
+  const r = TS * 1.35 * k;
+  for (let ty = v.y0; ty <= v.y1; ty++) for (let tx = v.x0; tx <= v.x1; tx++) {
+    if (!explored[idx(tx, ty)]) continue;
+    const [cx, cy] = SX((tx + 0.5) * TS, (ty + 0.5) * TS, 30); ge.beginPath(); ge.arc(cx, cy, r, 0, 6.283); ge.fill();
+  }
+  // 2) 어둠을 깔고, 가 본 곳은 반쯤, 내 둘레는 동그랗게 걷어내요
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, w, h);
+  g.fillStyle = `rgba(4,3,12,${DARK.base})`; g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'destination-out';
+  g.globalAlpha = DARK.seen; g.drawImage(e, 0, 0); g.globalAlpha = 1;
+  const [px, py] = SX(P.x, P.y, 40), R = DARK.R * k * lightMul();
+  const lg = g.createRadialGradient(px, py, R * 0.15, px, py, R);
+  lg.addColorStop(0, 'rgba(0,0,0,1)'); lg.addColorStop(0.45, 'rgba(0,0,0,0.92)'); lg.addColorStop(0.75, 'rgba(0,0,0,0.45)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = lg; g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-over';
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(m, 0, 0, W, H); ctx.restore();
+}
 function drawMood(W, H) {
   const T = theme(), b = run.boss, live = b && b.hp > 0;
   if (live && run.bossT == null) run.bossT = run.t;
@@ -3028,6 +3061,8 @@ function render() {
     if (f.type === 'bolt') { const L = 45; drawFx({ ...f, pts: f.pts.map(([x, y]) => [isoX(x, y + L), isoY(x, y + L) - L]) }); }
     else upright(f.x || 0, f.y || 0, f.lift || 0, () => drawFx(f));
   }
+  drawDarkness(W, H, z, v);
+  ctx.setTransform(z, 0, 0, z, (-view.x + sx) * z, (-view.y + sy) * z);
   ctx.textAlign = 'center';
   for (const n of nums) upright(n.x, n.y, 60, () => {
     const age = (n.t0 || n.t) - n.t, pop = typeof n.v === 'number' ? 1 + Math.max(0, 1 - age / 0.12) * (n.crit ? 0.9 : 0.5) : 1;
