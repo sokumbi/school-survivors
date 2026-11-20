@@ -13,4 +13,4 @@ for k, w in WIDTH.items():
     d = os.path.join(TMP, k); shutil.rmtree(d, ignore_errors=True)
     n = cut(src, d, min_area=1500, gap=6)
     big = max((Image.open(os.path.join(d, f'{i}.png')) for i in range(n)), key=lambda im: im.width * im.height)
-    pixel_art(big, w, sat=1.05).save(os.path.join(OUT, k + '.png')); print(k, 'ok')
+    pixel_art(big, w, px=1, sat=1.05).save(os.path.join(OUT, k + '.png')); print(k, 'ok')

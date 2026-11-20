@@ -25,7 +25,7 @@ def main():
         k = cut(src, d, min_area=800, gap=4)
         if not k: print('못 오림', key); continue
         big = max((Image.open(os.path.join(d, f'{i}.png')) for i in range(k)), key=lambda im: im.width * im.height)
-        pixel_art(big, wf * 2 * TS * n, sat=1.05).save(os.path.join(OUT, f'dt_{key}.png'))
+        pixel_art(big, wf * 2 * TS * n, px=1, sat=1.05).save(os.path.join(OUT, f'dt_{key}.png'))
         table.setdefault(room, []).append({'k': 'dt_' + key, 'n': n, 'wall': place == 'wall'})
     # 이제 안 쓰는 미드저니 소품 그림은 지워요 (원본은 art/roomprops 에 남아 있어요)
     for f in os.listdir(OUT):

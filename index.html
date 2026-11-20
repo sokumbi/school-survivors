@@ -496,7 +496,7 @@ const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0
 const HR = { run: [4, 9, 1], walk: [4, 7, 1], idle: [2, 2, 1], punch: [2, 10, 0] };
 const K_YD = HERO_H / 132;
 // 시험판(2026-11-20): 유담을 미드저니 자세 4장(img/ydm) + 코드 움직임으로 그려요. false면 예전 그림
-const ASSET_V = 20261124;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
+const ASSET_V = 20261125;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
 const MJ_HERO = false, YDM = ['idle', 'run', 'punch', 'hurt'];
 async function loadAll() {
   SPR = await fetch('img/sprites.json').then(r => r.json());
@@ -2448,7 +2448,7 @@ let shake = 0, toastMsg = '', toastT = 0;
 function toast(m) { toastMsg = m; toastT = 2.6; }
 let DPR = 1;
 function resize() {
-  DPR = Math.min(2, devicePixelRatio || 1);
+  DPR = Math.min(3, devicePixelRatio || 1);   // 아이폰(3배)도 선명하게
   cv.width = innerWidth * DPR; cv.height = innerHeight * DPR;
   // 비스듬한 화면 기준으로 가로 약 760, 세로 약 700이 보이게 (세로 폰이 기본)
   view.z = Math.max(0.3, Math.min(cv.width / 760, cv.height / 700));
@@ -2529,6 +2529,93 @@ function drawCubeFloor(v) {
   }
 }
 // 화면 분위기: 층 색 + 보스전엔 가장자리부터 어둡게, 붉게 두근두근
+// ════════════════ 분위기: 빛줄기 · 안개 · 먼지 · 빛나는 원 · 방 색감 ════════════════
+const ATMO = { fogSpr: null, grade: [0, 0, 0, 0], motes: [] };
+function fogSprite() {
+  if (ATMO.fogSpr) return ATMO.fogSpr;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (ATMO.fogSpr = c);
+}
+const themeFog = () => [[235, 240, 255], [255, 210, 240], [170, 235, 255]][Math.min(2, (run ? run.floor : 1) - 1)];
+// 창문 빛줄기: 창문 벽에서 방 바닥으로 비스듬히 떨어지는 빛 (밝게 더하기)
+function drawShafts(v) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const h = WALL_H, L = TS * 2.4, t = run.t;
+  const shaft = (A, B, C, D, k) => {
+    const g = ctx.createLinearGradient(A[0], A[1], (C[0] + D[0]) / 2, (C[1] + D[1]) / 2);
+    const a = 0.26 + 0.06 * Math.sin(t * 0.8 + k); g.addColorStop(0, `rgba(255,240,200,${a})`); g.addColorStop(0.6, `rgba(255,240,200,${a * 0.45})`); g.addColorStop(1, 'rgba(255,240,200,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.lineTo(...C); ctx.lineTo(...D); ctx.closePath(); ctx.fill();
+  };
+  for (let ty = v.y0; ty <= v.y1; ty++) for (let tx = v.x0; tx <= v.x1; tx++) {
+    if (grid[idx(tx, ty)] !== WALL) continue;
+    // 아래쪽(+y)이 방이고 그 면이 창문이면: 창문에서 +y 쪽 바닥으로
+    if (ty + 1 < GH && grid[idx(tx, ty + 1)] === ROOM && !roomHidden((tx + .5) * TS, (ty + 1.5) * TS) && wallKind(tx, ty, 0, tx, ty + 1) === 'window') {
+      const y1 = (ty + 1) * TS, xa = tx * TS + TS * 0.2, xb = tx * TS + TS * 0.8;
+      shaft(IP(xa, y1, h * 0.72), IP(xb, y1, h * 0.72), IP(xb + TS * 0.5, y1 + L, 0), IP(xa + TS * 0.5, y1 + L, 0), tx + ty);
+    }
+    if (tx + 1 < GW && grid[idx(tx + 1, ty)] === ROOM && !roomHidden((tx + 1.5) * TS, (ty + .5) * TS) && wallKind(tx, ty, 1, tx + 1, ty) === 'window') {
+      const x1 = (tx + 1) * TS, ya = ty * TS + TS * 0.2, yb = ty * TS + TS * 0.8;
+      shaft(IP(x1, ya, h * 0.72), IP(x1, yb, h * 0.72), IP(x1 + L, yb + TS * 0.5, 0), IP(x1 + L, ya + TS * 0.5, 0), tx * 3 + ty);
+    }
+  }
+  ctx.restore();
+}
+// 바닥 빛 원: 계단 입구·매점 앞·황금 캐비닛·갇힌 친구 (밝게 더하기)
+function glowRing(x, y, R, col, k = 1) {
+  const [cx, cy] = IP(x, y), p = 0.5 + 0.5 * Math.sin(run.t * 2.4 + x * 0.01);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R); g.addColorStop(0, `rgba(${col},${0.32 * k})`); g.addColorStop(0.7, `rgba(${col},${0.12 * k})`); g.addColorStop(1, `rgba(${col},0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.5, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = `rgba(${col},${(0.45 + 0.3 * p) * k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, R * 0.72, R * 0.36, 0, 0, 7); ctx.stroke();
+  // 위로 솟는 옅은 빛기둥
+  const bh = R * 1.6, bg = ctx.createLinearGradient(0, cy - bh, 0, cy); bg.addColorStop(0, `rgba(${col},0)`); bg.addColorStop(1, `rgba(${col},${0.16 * k})`);
+  ctx.fillStyle = bg; ctx.fillRect(cx - R * 0.35, cy - bh, R * 0.7, bh);
+  ctx.restore();
+}
+function drawGlows() {
+  if (stairs && !roomHidden(stairs.x, stairs.y)) glowRing(stairs.x, stairs.y + TS * 1.3, 110, stairs.locked ? '255,80,70' : '255,214,120');
+  if (run.shop && !roomHidden(run.shop.x, run.shop.y)) glowRing(run.shop.x, run.shop.y, 80, '255,190,90', 0.7);
+  for (const c of chests) if (c.gold && !c.open && !roomHidden(c.x, c.y)) glowRing(c.x, c.y + 20, 90, '255,210,80', 0.9);
+  for (const c of cages) if (c.st !== 'free' && !roomHidden(c.x, c.y)) glowRing(c.x, c.y, 100, '120,240,220', 0.6);
+}
+// 낮게 깔린 안개: 지도 곳곳에 천천히 흘러가는 덩어리
+function drawFog(v) {
+  if (!run.fog || run.fogFloor !== run.floor) { run.fogFloor = run.floor; run.fog = Array.from({ length: Math.round(GW * GH / 28) }, () => ({ x: Math.random() * GW * TS, y: Math.random() * GH * TS, r: rand(170, 320), ph: Math.random() * 6.28, a: rand(0.13, 0.24) })); }
+  const spr = fogSprite(), [fr, fg, fb] = themeFog();
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const f of run.fog) {
+    const x = f.x + Math.sin(run.t * 0.07 + f.ph) * 90 + run.t * 6 % (GW * TS), y = f.y + Math.cos(run.t * 0.05 + f.ph) * 60;
+    const tx = (x / TS) | 0, ty = (y / TS) | 0; if (tx < v.x0 - 4 || tx > v.x1 + 4 || ty < v.y0 - 4 || ty > v.y1 + 4) continue;
+    if (roomHidden(x, y)) continue;
+    const [cx, cy] = IP(x, y); ctx.globalAlpha = f.a * (0.8 + 0.2 * Math.sin(run.t * 0.5 + f.ph));
+    ctx.filter = 'none'; if (fr !== 235) ctx.globalAlpha *= 1; ctx.drawImage(spr, cx - f.r, cy - f.r * 0.45, f.r * 2, f.r * 0.9);
+  }
+  ctx.globalAlpha = 0.06; ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
+  ctx.restore();
+}
+// 떠다니는 먼지·빛 알갱이: 내 둘레에서 천천히 오르내리며 반짝여요
+function drawMotes() {
+  const M = ATMO.motes;
+  while (M.length < 70) M.push({ x: P.x + rand(-420, 420), y: P.y + rand(-420, 420), z: rand(10, 160), vx: rand(-8, 8), vy: rand(-8, 8), vz: rand(-6, 10), t: rand(3, 7), ph: Math.random() * 6.28 });
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const m of M) {
+    m.t -= 1 / 60; m.x += m.vx / 60; m.y += m.vy / 60; m.z += m.vz / 60;
+    if (m.t <= 0 || Math.hypot(m.x - P.x, m.y - P.y) > 520) { Object.assign(m, { x: P.x + rand(-420, 420), y: P.y + rand(-420, 420), z: rand(10, 160), t: rand(3, 7) }); continue; }
+    const [cx, cy] = IP(m.x, m.y, m.z), a = Math.max(0, Math.sin(run.t * 2 + m.ph)) * Math.min(1, m.t);
+    ctx.fillStyle = `rgba(255,240,200,${0.85 * a})`; ctx.fillRect(cx - 2, cy - 2, 4, 4);
+    ctx.fillStyle = `rgba(255,240,200,${0.22 * a})`; ctx.fillRect(cx - 5, cy - 5, 10, 10);
+  }
+  ctx.restore();
+}
+// 방마다 색감: 지금 서 있는 방의 색을 아주 살짝 덮어요 (천천히 바뀌어요)
+const GRADE = { '도서실': [255, 190, 110], '과학실': [90, 220, 210], '음악실': [190, 140, 255], '미술실': [255, 150, 200], '급식실': [255, 170, 90],
+  '보건실': [140, 255, 200], '창고': [200, 150, 100], '방송실': [110, 160, 255], '컴퓨터실': [100, 220, 255], '교무실': [255, 220, 160] };
+function drawGrade(W, H) {
+  const k = roomOf[idx((P.x / TS) | 0, (P.y / TS) | 0)], c = k >= 0 && GRADE[rooms[k].name], tgt = c ? [...c, 0.1] : [255, 230, 190, 0.04];
+  const G = ATMO.grade; for (let i = 0; i < 4; i++) G[i] += (tgt[i] - G[i]) * 0.03;
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(${G[0] | 0},${G[1] | 0},${G[2] | 0},${Math.min(1, G[3] * 3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
+}
 // 시야: 내 주변만 밝고 멀수록 어두워요. 지나간 곳은 살짝 보이고, 안 가 본 곳은 깜깜
 const DARK = { s: 0.25, m: null, e: null, R: 360, seen: 0.42, base: 0.95 };
 // 시야 넓이: 손전등 기술(단계마다 +12%), 장비 '시야', 미술 동아리. 아무리 모아도 1.6배까지만
@@ -2995,6 +3082,7 @@ function render() {
   drawWarns();
   ctx.restore();
   drawRoomNames();
+  drawGlows(); drawShafts(v);
   // 2) 바닥에 놓인 작은 것들
   for (const g of gems) upright(g.x, g.y, 0, () => {
     const im = IMG['ui/gem'], s = g.big ? 30 : 20, bob = Math.sin(run.t * 5 + g.x) * 3;
@@ -3061,6 +3149,7 @@ function render() {
     if (f.type === 'bolt') { const L = 45; drawFx({ ...f, pts: f.pts.map(([x, y]) => [isoX(x, y + L), isoY(x, y + L) - L]) }); }
     else upright(f.x || 0, f.y || 0, f.lift || 0, () => drawFx(f));
   }
+  drawFog(v); drawMotes(); drawGrade(W, H);
   drawDarkness(W, H, z, v);
   ctx.setTransform(z, 0, 0, z, (-view.x + sx) * z, (-view.y + sy) * z);
   ctx.textAlign = 'center';
@@ -3449,7 +3538,7 @@ addEventListener('keydown', e => {
 
 // 1280×720 무대에 그리고 화면을 꽉 채워요(남는 쪽은 잘림)
 function drawTitle(t) {
-  const d = Math.min(2, devicePixelRatio || 1), W = Math.round(innerWidth * d), H = Math.round(innerHeight * d);
+  const d = Math.min(3, devicePixelRatio || 1), W = Math.round(innerWidth * d), H = Math.round(innerHeight * d);
   if (TT.w !== W || TT.h !== H) { tcv.width = TT.w = W; tcv.height = TT.h = H; }
   // 넓은 화면은 폭에 맞추고, 좁은(세로) 화면은 학교가 다 보이게 줄이고 위쪽은 하늘로 채워요. 땅은 늘 화면 아래
   const g = tctx, s = W / H >= 16 / 9 ? W / 1280 : Math.max(W / 1280, H / 1150), oy0 = W / H >= 16 / 9 ? H - 692 * s : Math.min((H - 720 * s) / 2, H - 692 * s);

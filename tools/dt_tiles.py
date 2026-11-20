@@ -9,7 +9,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'art/drawthings/tiles')
 OUT = os.path.join(ROOT, 'img/tiles')
-PX, TS, WALL_H = 2, 64, 76
+PX, TS, WALL_H = 1, 64, 76   # 픽셀 한 점 = 세계 1칸 (2026-11-21: 해상도 2배)
 
 
 def content_box(a, thr=235):
