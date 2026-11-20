@@ -258,6 +258,7 @@
   .pane,.slot,.row,.sel-big{border-radius:0!important;clip-path:var(--px)}
   .tr-wrap{border-radius:0!important}
   .tr-head .pts,.tr-head .lvup,.tr-side .tc{border-radius:0!important;clip-path:var(--px)}
+  #selectOv img,#hub img,.tk-me{image-rendering:pixelated}
   /* 장비 창 (디아블로처럼: 왼쪽 인형 + 6칸, 오른쪽 가방, 아래 비교 카드) */
   #eqOv{background:radial-gradient(ellipse at 50% 0%,#2a2238,#0e0b16 70%);justify-content:flex-start;gap:8px;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
   .eq-head{display:flex;align-items:center;gap:8px;width:100%;max-width:980px}
@@ -364,7 +365,7 @@ function applyTheme() {
 const tileImg = k => TT_IMG[k] || IMG['tiles/' + k];
 const HERO_H = 116, PAPER_H = 74;       // 세계에서의 키 (타일 64 기준)
 const TORSO = HERO_H * 0.42;            // 공격이 나가는 높이
-const WALL = 0, ROOM = 1, PROP = 2, HALL = 3;
+const WALL = 0, ROOM = 1, PROP = 2, HALL = 3, DOOR = 4;
 
 let SPR = {};
 const K_BAT = HERO_H / 168, K_BARE = HERO_H / 84, K_PAPER = PAPER_H / 150;
@@ -401,14 +402,20 @@ let decos = [];
 // 유담 동작 그림 (드리미나 16비트 픽셀, art/yudam → img/yd). [장 수, 초당 장수, 반복]
 // 그림 220×190, 발바닥 (110,178), 서 있는 키 132px
 const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0], punch: [4, 12, 0], hurt: [4, 10, 0],
-  trip: [5, 10, 0], ko: [5, 8, 0], getup: [5, 8, 0], dizzy: [4, 5, 1], tired: [4, 4, 1], joy: [5, 8, 0], victory: [5, 6, 0] };
+  trip: [5, 10, 0], ko: [5, 8, 0], getup: [5, 8, 0], dizzy: [4, 5, 1], tired: [4, 4, 1], joy: [5, 8, 0], victory: [5, 6, 0],
+  walkf: [4, 8, 1], walkb: [4, 8, 1] };   // 화면 아래(앞모습)·위(뒷모습)로 걷기
+// 하람 전용 동작 (없는 동작은 유담 그림에 하람 색을 입혀 써요)
+const HR = { run: [4, 9, 1], walk: [4, 7, 1], idle: [2, 2, 1], punch: [2, 10, 0] };
 const K_YD = HERO_H / 132;
 async function loadAll() {
   SPR = await fetch('img/sprites.json').then(r => r.json());
   for (const a in YD) for (let k = 0; k < YD[a][0]; k++) SPR[`yd/${a}_${k}`] = { ax: 110, ay: 178 };
+  for (const a of ['run', 'idle', 'punch']) for (let k = 0; k < HR[a === 'walk' ? 'run' : a][0]; k++) SPR[`hr/${a}_${k}`] = { ax: 110, ay: 178 };
+  for (const n of ['cab_f', 'cab_open', 'cab_s', 'cab_door']) SPR['props/box_' + n] = { ax: 0, ay: 0 };
   for (const k in PROPS) { if (PROPS[k].box) { SPR[`props/box_${k}_f`] = SPR[`props/box_${k}_s`] = { ax: 0, ay: 0 }; } else SPR['props/' + k] = { ax: 0, ay: 0 }; }
   for (const k of TILE_IMGS) SPR['tiles/' + k] = { ax: 0, ay: 0 };
   for (const k of MON_IMGS) SPR['mon/' + k] = { ax: 0, ay: 0 };
+  SPR['yd/ui_ready'] = { ax: 0, ay: 0 };
   for (const k of UI_IMGS) SPR['ui/' + k] = { ax: 0, ay: 0 };
   await Promise.all(Object.keys(SPR).map(k => new Promise(res => {
     const im = new Image(); im.onload = () => { IMG[k] = im; res(); }; im.onerror = () => res(); im.src = `img/${k}.png`;
@@ -427,6 +434,9 @@ const UI_IMGS = ['punch', 'shoes', 'magnet', 'note', 'bat', 'power', 'ball', 'gu
   'radio', 'dash', 'star', 'lock', 't_pe', 't_math', 't_nurse', 't_kor', 't_art', 't_home', 'k_haram', 'k_minjun', 'k_seoyeon', 'k_jiho', 'k_haeun', 'k_doyun', 'k_sua',
   'p_eraser', 'p_ball', 'p_ruler', 'p_plane', 'p_book', 'p_chalk', 'p_cube', 'locker', 'locker_open', 'stairs', 'p_burst', 'p_spark',
   't_sci', 't_music', 't_food', 't_fake', 't_principal', 't_captain',
+  'stamina', 'grit', 'focus', 'calc', 'diet', 'firstaid', 'bookworm', 'poem', 'watercolor', 'sketch', 'gradcap', 'diploma',
+  'c_athlete', 'c_coach', 'c_archer', 'c_math', 'c_doctor', 'c_nurse', 'c_writer', 'c_webtoon', 'c_painter', 'c_designer', 'nameplate', 'trophy',
+  'fx_spark', 'fx_boom', 'fx_dust', 'fx_elec', 'fx_heal', 'fx_lvup', 'fx_wave', 'fx_paint', 'pausebtn', 'fx_danger', 'fx_smoke', 'fx_star',
   'i_glove', 'i_mitt', 'i_workglove', 'i_mitten', 'i_backpack', 'i_crossbag', 'i_duffel', 'i_lunchbag', 'ult', 'bagicon', 'pouch', 'mannequin',
   'i_cap', 'i_ribbon', 'i_helmet', 'i_beanie', 'i_blazer', 'i_gym', 'i_hoodie', 'i_coat', 'i_slipper', 'i_sneaker', 'i_boot', 'i_roller', 'i_pencil', 'i_tag', 'i_watch', 'i_key'];
 const TPORT = { pe: 't_pe', math: 't_math', nurse: 't_nurse', kor: 't_kor', art: 't_art', home: 't_home', sci: 't_sci', real: 't_sci', music: 't_music', food: 't_food', fake: 't_fake', principal: 't_principal', captain: 't_captain' };
@@ -488,7 +498,23 @@ const RAR = [
   { n: '희귀', c: '#5aa0ff', k: 2, m: 1.15 },
   { n: '영웅', c: '#c46bff', k: 3, m: 1.3 },
   { n: '전설', c: '#ffa133', k: 4, m: 1.6 },
+  { n: '유일', c: '#ffe14d', k: 4, m: 2.1 },
 ];
+// 황금 캐비닛에만 들어 있는 특별한 장비 (능력이 정해져 있고 층이 높을수록 세져요)
+const UNIQUES = [
+  { slot: 'acc',  name: '외계 광선총 배지',      img: 'i_tag',      ic: '📛', stats: { atk: 22, crit: 12, cd: 10 } },
+  { slot: 'head', name: '교장 선생님 금빛 모자',  img: 'i_helmet',   ic: '⛑️', stats: { hp: 40, regen: 1.2, crit: 8 } },
+  { slot: 'hand', name: '전설의 홈런 글러브',     img: 'i_mitt',     ic: '🥎', stats: { atk: 28, crit: 10, spd: 6 } },
+  { slot: 'feet', name: '번개 롤러 운동화',       img: 'i_roller',   ic: '🛼', stats: { spd: 16, cd: 10, mag: 30 } },
+  { slot: 'body', name: '큐브 방어 교복',         img: 'i_blazer',   ic: '🧥', stats: { hp: 55, atk: 12, regen: 1 } },
+  { slot: 'bag',  name: '무한 도시락 가방',       img: 'i_lunchbag', ic: '🍱', stats: { hp: 30, regen: 2, mag: 45 } },
+];
+function makeUnique() {
+  const own = new Set([...Object.values(S.equip), ...S.bag].filter(Boolean).map(i => i.name));
+  const pool = UNIQUES.filter(u => !own.has(u.name)); const U = pick(pool.length ? pool : UNIQUES), k = 1 + 0.25 * ((run ? run.floor : 1) - 1);
+  const stats = {}; for (const [st, v] of Object.entries(U.stats)) stats[st] = STAT[st].dec ? Math.round(v * k * 10) / 10 : Math.round(v * k);
+  return { id: Math.random().toString(36).slice(2, 9), img: U.img, slot: U.slot, ic: U.ic, name: U.name, r: 4, stats, unique: true };
+}
 const BASES = {
   head: [['🧢', '야구모자', 'i_cap'], ['🎀', '머리띠', 'i_ribbon'], ['⛑️', '안전모', 'i_helmet'], ['🧶', '털모자', 'i_beanie']],
   body: [['🧥', '교복 재킷', 'i_blazer'], ['🎽', '체육복', 'i_gym'], ['👕', '후드티', 'i_hoodie'], ['🥼', '과학 가운', 'i_coat']],
@@ -546,7 +572,10 @@ function beep(freq, dur, type = 'square', vol = 0.06, slide = 0) {
 }
 const SND = {
   swing: () => beep(420, .08, 'triangle', .05, -250),
-  hit:   () => beep(180, .05, 'square', .025, -80),
+  hit:   () => { const f = 150 + Math.random() * 60; beep(f, .06, 'square', .04, -90); beep(70, .07, 'sine', .07, -30); },   // 퍽: 높은 딱 + 낮은 쿵
+  crit:  () => { beep(900, .05, 'square', .04, -500); beep(90, .12, 'sine', .09, -40); },
+  kill:  () => { beep(260, .07, 'square', .045, 180); setTimeout(() => beep(520, .06, 'triangle', .035), 40); },
+  thud:  () => { beep(60, .25, 'sine', .12, -25); beep(140, .15, 'sawtooth', .05, -100); },
   gem:   () => beep(900, .05, 'sine', .04, 300),
   coin:  () => { beep(1300, .05, 'square', .03); setTimeout(() => beep(1700, .07, 'square', .03), 50); },
   hurt:  () => beep(140, .2, 'sawtooth', .07, -90),
@@ -653,13 +682,50 @@ const UPG = {
   crayon: { cls: 'mag', t: 'art', req: 'paint', name: '크레파스 마력', ic: '🖍️', max: 4, desc: () => '마법(물감·번개) 피해 +15%' },
   bolt:   { cls: 'mag', t: 'art', req: 'paint', name: '번개 실험', ic: '⚡', max: 5, w: 1, desc: l => l === 0 ? '번개가 괴물 사이를 건너뛰어요' : '한 마리 더 건너뛰어요' },
   palette:{ cls: 'mag', t: 'art', req: 'bolt', name: '큰 팔레트', ic: '🖼️', max: 3, desc: () => '웅덩이 +15% · 번개 한 번 더 튀어요' },
+  // ── 더 깊은 가지 · 졸업(Lv 12) · 진로(둘 중 하나) ──
+  stamina:   { cls: 'war', t: 'pe', req: 'power', name: '체력 단련', ic: '🏋️', max: 3, desc: () => '최대 체력 +15' },
+  grit:      { cls: 'war', t: 'pe', req: 'guard', name: '근성', ic: '🔥', max: 3, desc: () => '체력 40% 아래일 때 피해 +20%' },
+  grad_war:  { cls: 'war', t: 'pe', req: 'grit', grad: 1, lv: 12, icon: 'gradcap', name: '체육부 졸업', ic: '🎓', max: 1, desc: () => '모든 피해 +10% · 최대 체력 +20 · 진로가 열려요' },
+  c_athlete: { cls: 'war', t: 'pe', req: 'grad_war', career: 1, name: '국가대표 선수', ic: '🥇', max: 1, desc: () => '공격력 +30% · 빠르기 +10%' },
+  c_coach:   { cls: 'war', t: 'pe', req: 'grad_war', career: 1, name: '체육 선생님', ic: '📣', max: 1, desc: () => '최대 체력 +60 · 받는 피해 -15%' },
+  focus:     { cls: 'arch', t: 'math', req: 'alarm', name: '집중력', ic: '👁️', max: 3, desc: () => '치명타 피해 +25%' },
+  calc:      { cls: 'arch', t: 'math', req: 'aim', name: '계산왕', ic: '🧮', max: 3, desc: () => '공격이 6% 더 자주' },
+  grad_arch: { cls: 'arch', t: 'math', req: 'calc', grad: 1, lv: 12, icon: 'gradcap', name: '다트부 졸업', ic: '🎓', max: 1, desc: () => '모든 피해 +10% · 최대 체력 +20 · 진로가 열려요' },
+  c_archer:  { cls: 'arch', t: 'math', req: 'grad_arch', career: 1, name: '양궁 국가대표', ic: '🏹', max: 1, desc: () => '치명타 +15% · 치명타 피해 +50%' },
+  c_math:    { cls: 'arch', t: 'math', req: 'grad_arch', career: 1, name: '수학자', ic: '🧮', max: 1, desc: () => '경험치 +30% · 공격 15% 더 자주' },
+  diet:      { cls: 'heal', t: 'nurse', req: 'milk', name: '튼튼 식단', ic: '🥗', max: 3, desc: () => '최대 체력 +20' },
+  firstaid:  { cls: 'heal', t: 'nurse', req: 'vitamin', name: '응급처치', ic: '🧰', max: 3, desc: () => '회복량 +30%' },
+  grad_heal: { cls: 'heal', t: 'nurse', req: 'firstaid', grad: 1, lv: 12, icon: 'gradcap', name: '보건부 졸업', ic: '🎓', max: 1, desc: () => '모든 피해 +10% · 최대 체력 +20 · 진로가 열려요' },
+  c_doctor:  { cls: 'heal', t: 'nurse', req: 'grad_heal', career: 1, name: '의사', ic: '🩺', max: 1, desc: () => '1초마다 체력 +3 · 리코더 회복 2배' },
+  c_nurse:   { cls: 'heal', t: 'nurse', req: 'grad_heal', career: 1, name: '간호사', ic: '🏥', max: 1, desc: () => '최대 체력 +50 · 무적 시간 +0.3초' },
+  bookworm:  { cls: 'sum', t: 'kor', req: 'ink', name: '다독왕', ic: '📚', max: 2, desc: () => '책 요정 +1마리' },
+  poem:      { cls: 'sum', t: 'kor', req: 'quick', name: '시 낭송', ic: '🪶', max: 3, desc: () => '소환수 피해 +10%' },
+  grad_sum:  { cls: 'sum', t: 'kor', req: 'poem', grad: 1, lv: 12, icon: 'gradcap', name: '문예부 졸업', ic: '🎓', max: 1, desc: () => '모든 피해 +10% · 최대 체력 +20 · 진로가 열려요' },
+  c_writer:  { cls: 'sum', t: 'kor', req: 'grad_sum', career: 1, name: '작가', ic: '✒️', max: 1, desc: () => '소환수 피해 +40%' },
+  c_webtoon: { cls: 'sum', t: 'kor', req: 'grad_sum', career: 1, name: '웹툰 작가', ic: '🖊️', max: 1, desc: () => '종이비행기 +2 · 책 요정 +1' },
+  watercolor:{ cls: 'mag', t: 'art', req: 'crayon', name: '수채화', ic: '🖌️', max: 3, desc: () => '물감 웅덩이가 1초 더 남아요' },
+  sketch:    { cls: 'mag', t: 'art', req: 'palette', name: '스케치', ic: '✏️', max: 3, desc: () => '번개 피해 +15%' },
+  grad_mag:  { cls: 'mag', t: 'art', req: 'sketch', grad: 1, lv: 12, icon: 'gradcap', name: '미술부 졸업', ic: '🎓', max: 1, desc: () => '모든 피해 +10% · 최대 체력 +20 · 진로가 열려요' },
+  c_painter: { cls: 'mag', t: 'art', req: 'grad_mag', career: 1, name: '화가', ic: '🎨', max: 1, desc: () => '마법 피해 +40% · 웅덩이 +30%' },
+  c_designer:{ cls: 'mag', t: 'art', req: 'grad_mag', career: 1, name: '디자이너', ic: '📐', max: 1, desc: () => '공격 15% 더 자주 · 웅덩이 +20%' },
 };
+const icOf = k => UPG[k].icon || k;
+const graduated = () => P && Object.keys(UPG).some(k => UPG[k].grad && P.w[k]);
+// 정보창 호칭: 학생 → 동아리 신입 → 선배 → 에이스 → 졸업생 → 진로
+function heroTitle() {
+  if (!P) return '';
+  if (P.career) return UPG[P.career].name;
+  if (P.cls) { const c = CLASSES[P.cls].name; if (graduated()) return `${c} 졸업생`;
+    const pts = Object.keys(UPG).filter(k => UPG[k].cls === P.cls).reduce((a, k) => a + P.w[k], 0);
+    return pts >= 12 ? `${c} 에이스` : pts >= 6 ? `${c} 선배` : `${c} 신입 부원`; }
+  return P.lv >= 3 ? '2학년 모험생' : '2학년 학생';
+}
 // 기술마다 직업 보너스
 const WCAT = { bat: 'war', ball: 'war', boom: 'arch', eraser: 'arch', recorder: 'heal', plane: 'sum', book: 'sum', paint: 'mag', bolt: 'mag' };
 function wm(k) {
   const c = WCAT[k];
-  if (c === 'sum') return 1 + 0.15 * P.w.ink + (P.cls === 'sum' ? 0.15 : 0);
-  if (c === 'mag') return 1 + 0.15 * P.w.crayon + (P.cls === 'mag' ? 0.15 : 0);
+  if (c === 'sum') return 1 + 0.15 * P.w.ink + 0.1 * P.w.poem + (P.cls === 'sum' ? 0.15 : 0) + (P.w.c_writer ? 0.4 : 0);
+  if (c === 'mag') return (1 + 0.15 * P.w.crayon + (P.cls === 'mag' ? 0.15 : 0) + (P.w.c_painter ? 0.4 : 0)) * (k === 'bolt' ? 1 + 0.15 * P.w.sketch : 1);
   return 1;
 }
 const MAX_WEAPONS = 5;
@@ -675,7 +741,7 @@ function newRun() {
   B = baseStats();
   P = { x: 0, y: 0, face: 1, hp: B.maxHp, maxHp: B.maxHp, speed: B.speed, bonusHp: 0, speedMul: 1,
         lv: 1, xp: 0, need: 6, inv: 0, hurtT: 0, atkT: 0, walkT: 0, moving: false, joyT: 0, deadT: 0, won: false,
-        dashT: 0, dashCd: 0, dvx: 0, dvy: 0, ult: 0, ultT: 0, pts: 0, cls: null, books: [],
+        dashT: 0, dashCd: 0, dvx: 0, dvy: 0, ult: 0, ultT: 0, pts: 0, cls: null, career: null, books: [],
         w: Object.fromEntries(Object.keys(UPG).map(k => [k, 0])), cd: {}, planeAng: 0 };
   P.w.punch = 1;
   { const ch = charOf(); if (ch.w !== 'punch') P.w[ch.w] = 1; }
@@ -686,8 +752,8 @@ function newRun() {
 }
 function recalc() { // 장비를 바꾸면 능력치 다시 계산
   const oldMax = P.maxHp; B = baseStats();
-  P.maxHp = B.maxHp + P.bonusHp + (P.cls === 'war' ? 30 : 0); P.hp += Math.max(0, P.maxHp - oldMax); P.hp = Math.min(P.hp, P.maxHp);
-  P.speed = B.speed * P.speedMul;
+  P.maxHp = B.maxHp + P.bonusHp + (P.cls === 'war' ? 30 : 0) + 15 * P.w.stamina + 20 * P.w.diet + (graduated() ? 20 : 0) + (P.w.c_coach ? 60 : 0) + (P.w.c_nurse ? 50 : 0); P.hp += Math.max(0, P.maxHp - oldMax); P.hp = Math.min(P.hp, P.maxHp);
+  P.speed = B.speed * P.speedMul * (P.w.c_athlete ? 1.1 : 1);
 }
 
 // ════════════════ 던전 만들기: 방(교실) + 복도 ════════════════
@@ -710,7 +776,7 @@ function buildFloor(n) {
   mini = document.createElement('canvas'); mini.width = GW * 3; mini.height = GH * 3; miniDirty = true;
   const s = rooms[0];
   P.x = (s.x + s.w / 2) * TS; P.y = (s.y + s.h / 2) * TS;
-  computeFlow(); applyTheme(); run.bossT = null; run.bossEnd = null; makeCamps(); placeNpc();
+  computeFlow(); applyTheme(); run.bossT = null; run.bossEnd = null; makeCamps(); makeSpots(); placeNpc(); setTimeout(saveRun, 50);
   toast(n === FLOORS ? `${n}층 · ${theme().name} · 옥상 문을 함장이 지켜요!` : `${n}층 · ${theme().name} · 계단을 찾아 올라가요!`);
 }
 
@@ -747,16 +813,33 @@ function tryBuild(n) {
   let far = 1, fd = -1;
   rooms.forEach((r, k) => { const v = d[idx(cx(r), cy(r))]; if (k && v > fd) { fd = v; far = k; } });
   if (fd < 28) return false;
+  if (!run) run = {};
   rooms.forEach((r, k) => { r.name = k === 0 ? `${n}학년 ${ri(1, 9)}반` : ROOM_NAMES[(k + n * 3) % ROOM_NAMES.length]; r.kind = k === 0 ? 'start' : k === far ? 'stairs' : 'room'; });
+  // 문: 복도가 교실 벽에 닿는 곳(폭 4칸 이하)에 미닫이문. 처음엔 시작 교실만 보여요
+  run.doors = [];
+  rooms.forEach((r, k) => {
+    r.open = k === 0;
+    const sides = [[r.x, r.y - 1, 1, 0, r.w], [r.x, r.y + r.h, 1, 0, r.w], [r.x - 1, r.y, 0, 1, r.h], [r.x + r.w, r.y, 0, 1, r.h]];
+    let made = 0;
+    for (const [x0, y0, dx, dy, len] of sides) {
+      let run_ = [];
+      const flush = () => { if (run_.length && run_.length <= 4 && k) { const g = { room: k, tiles: run_, open: false, t: 0 }; run.doors.push(g); for (const [x, y] of run_) grid[idx(x, y)] = DOOR; made++; } run_ = []; };
+      for (let i = 0; i <= len; i++) { const x = x0 + dx * i, y = y0 + dy * i; if (i < len && grid[idx(x, y)] === HALL) run_.push([x, y]); else flush(); }
+    }
+    if (!made) r.open = true;
+  });
   const sr = rooms[far];
   sr.name = n === FLOORS ? '옥상 가는 길' : '계단';
   stairs = { x: (sr.x + sr.w / 2) * TS, y: (sr.y + sr.h / 2) * TS, room: far, locked: n === FLOORS };
   const cand = rooms.map((r, k) => k).filter(k => rooms[k].kind === 'room').sort((a, b) => rooms[a].deg - rooms[b].deg || Math.random() - 0.5);
   // 캐비닛: 장비를 얻는 곳 (층이 높을수록 많고, 가끔 황금 캐비닛)
-  chests = cand.slice(0, Math.max(2, Math.min(cand.length - 2, 3 + n))).map(k => {
-    const r = rooms[k]; return { x: (r.x + 1.5 + Math.random() * (r.w - 3)) * TS, y: (r.y + 1.7) * TS, open: false, prog: 0, gold: Math.random() < 0.1 + 0.06 * n };
-  });
-  const chestRooms = cand.slice(0, chests.length);
+  chests = [];
+  for (const gk of [...cand].reverse()) {   // 외진 방부터 뒷벽 자리를 찾아요 (문 앞은 피해요)
+    let gx = -1; const r = rooms[gk];
+    for (let t = 0; t < 20 && gx < 0; t++) { const x = r.x + ri(2, r.w - 3); if (grid[idx(x, r.y - 1)] === WALL && grid[idx(x - 1, r.y - 1)] === WALL && grid[idx(x + 1, r.y - 1)] === WALL) gx = x; }
+    if (gx >= 0) { grid[idx(gx, r.y)] = PROP; chests.push({ x: (gx + 0.5) * TS, y: (r.y + 0.5) * TS, tx: gx, ty: r.y, room: gk, open: false, prog: 0, gold: true }); break; }
+  }
+  const chestRooms = chests.map(c => c.room);
   const cageRooms = cand.filter(k => !chestRooms.includes(k)).sort((a, b) => d[idx(cx(rooms[b]), cy(rooms[b]))] - d[idx(cx(rooms[a]), cy(rooms[a]))]);
   cages = cageRooms.slice(0, 2).map(k => { const r = rooms[k]; r.cage = true;
     return { x: (r.x + r.w / 2) * TS, y: (r.y + r.h / 2 + 0.6) * TS, room: k, st: 'locked', prog: 0, guards: [], t: 0 }; });
@@ -795,20 +878,21 @@ function tryBuild(n) {
   walkTiles = []; for (let i = 0; i < GW * GH; i++) if (grid[i] === ROOM || grid[i] === HALL) walkTiles.push(i);
   return true;
 }
-function walkCount() { let c = 0; for (let i = 0; i < GW * GH; i++) if (grid[i] === ROOM || grid[i] === HALL) c++; return c; }
+function walkCount() { let c = 0; for (let i = 0; i < GW * GH; i++) if (grid[i] === ROOM || grid[i] === HALL || grid[i] === DOOR) c++; return c; }
 function bfsFrom(sx, sy, limit = 9999) {
   const d = new Int16Array(GW * GH).fill(-1), q = new Int32Array(GW * GH); let h = 0, t = 0;
   d[idx(sx, sy)] = 0; q[t++] = idx(sx, sy);
   while (h < t) {
     const i = q[h++], x = i % GW, y = (i / GW) | 0, v = d[i]; if (v >= limit) continue;
     for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const X = x + ox, Y = y + oy; if (!walk(X, Y)) continue; const j = idx(X, Y);
+      const X = x + ox, Y = y + oy; if (!walk(X, Y) && !(BFS_DOORS && X >= 0 && Y >= 0 && X < GW && Y < GH && grid[idx(X, Y)] === DOOR)) continue; const j = idx(X, Y);
       if (d[j] < 0) { d[j] = v + 1; q[t++] = j; }
     }
   }
   return d;
 }
-function allReachable(sx, sy, count) { const d = bfsFrom(sx, sy); let c = 0; for (let i = 0; i < d.length; i++) if (d[i] >= 0) c++; return c === count; }
+let BFS_DOORS = false;   // 지도 만들 때는 닫힌 문도 지나갈 수 있는 길로 봐요
+function allReachable(sx, sy, count) { BFS_DOORS = true; const d = bfsFrom(sx, sy); BFS_DOORS = false; let c = 0; for (let i = 0; i < d.length; i++) if (d[i] >= 0) c++; return c === count; }
 function computeFlow() {
   const tx = clamp((P.x / TS) | 0, 0, GW - 1), ty = clamp((P.y / TS) | 0, 0, GH - 1);
   if (walk(tx, ty) || !flow) flow = bfsFrom(tx, ty, 40);
@@ -838,7 +922,7 @@ function spawnAt(kind, x, y, type) {
   base.aiT = 1 + Math.random() * 2; base.wind = 0;
   if (kind === 'boss') e = { ...base, kind, type: 'captain', name: '네모단 함장', s: 1, h: 230, hp: 3400, maxHp: 3400, sp: 70, dmg: 24, r: 50, xp: 40, gold: 60, aiT: 2.5, pat: 0 };
   else if (kind === 'elite') {
-    const ty = type || pick(Object.keys(ELITES)), T = ELITES[ty];
+    const ty = type || pick(Object.keys(ELITES)), T = ELITES[ty];   // 지킴이는 금빛으로 보여요
     e = { ...base, kind, type: ty, name: T.name, s: 1, h: T.h, hp: T.hp * m, maxHp: T.hp * m, sp: T.sp, dmg: T.dmg + run.floor * 3, r: T.r, xp: 10, gold: 8 };
   } else {
     const ty = type || pickMob(), T = MOBS[ty];
@@ -846,16 +930,61 @@ function spawnAt(kind, x, y, type) {
   }
   enemies.push(e); return e;
 }
+// 뒤지기: 앞에 잠깐 서 있으면 뒤져요. 확률로 장비·금화·우유가 나오고, 아니면 웃긴 꽝
+const SEARCH = {
+  lockers: { n: 4, item: 0.07, coin: 0.12, milk: 0.04, name: '사물함', empty: ['체육복 냄새만 나요…', '텅~', '먹다 남은 빵 (먹지 마요)', '누군가의 일기장… 덮어 두자'] },
+  desk:    { n: 2, item: 0.04, coin: 0.1, milk: 0.02, name: '책상 서랍', empty: ['0점 시험지…', '지우개 가루만', '텅~', '구겨진 쪽지: "배고프다"'] },
+  tdesk:   { n: 1, item: 0.12, coin: 0.2, milk: 0.03, name: '교탁', empty: ['분필 한 상자', '출석부… 내 이름 있다!', '텅~'] },
+  shelf:   { n: 1, item: 0.04, coin: 0.08, milk: 0, name: '책장', empty: ['두꺼운 사전', '먼지 콜록콜록', '텅~'] },
+  trash:   { n: 1, item: 0.02, coin: 0.06, milk: 0, name: '쓰레기통', empty: ['바나나 껍질!', '구겨진 숙제', '냄새가… 으악'] },
+  plant:   { n: 1, item: 0.015, coin: 0.05, milk: 0, name: '화분', empty: ['흙만 가득', '지렁이 안녕?', '텅~'] },
+};
+function makeSpots() {
+  run.spots = [];
+  for (const o of decos) { const S_ = SEARCH[o.k]; if (!S_) continue; const P_ = PROPS[o.k];
+    for (let i = 0; i < S_.n; i++) run.spots.push({ o, i, k: o.k, x: (o.tx + (i + 0.5) * P_.n / S_.n) * TS, y: (o.ty + P_.d) * TS + 22, done: false, prog: 0, room: roomOf[idx(o.tx, o.ty)] }); }
+  const lk = run.spots.filter(q => q.k === 'lockers' && q.room > 0), any = run.spots.filter(q => q.room > 0);
+  const c = pick(lk.length ? lk : any.length ? any : run.spots); if (c) c.clue = true;   // 단서는 사물함 한 칸에 숨어 있어요
+}
+function searchSpot(q) {
+  q.done = true; SND.coin(); questEv('cab');
+  const S_ = SEARCH[q.k]; let txt;
+  if (q.clue && !run.clue) { giveClue(); txt = '🔷 단서!'; }
+  const r = Math.random();
+  if (r < S_.item) { items.push({ x: q.x, y: q.y + 30, it: makeItem(Math.random() < 0.25 ? 1 : 0), t: 0, pop: true }); txt = txt || '✨ 장비!'; }
+  else if (r < S_.item + S_.coin) { const g = Math.round(rand(2, 6) * run.floor); for (let i = 0; i < g; i++) coins.push({ x: q.x + rand(-25, 25), y: q.y + rand(10, 40), v: 1 }); txt = txt || `금화 +${g}`; }
+  else if (r < S_.item + S_.coin + S_.milk) { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * 0.25); txt = txt || '🥛 우유! 체력 회복'; }
+  else txt = txt || pick(S_.empty);
+  nums.push({ x: q.x, y: q.y - 40, v: txt, t: 1.6, big: false, heal: txt.startsWith('🥛') });
+  if (q.o) { q.o.opened = q.o.opened || []; q.o.opened[q.i] = true; }
+}
+function updateSpots(dt) {
+  let best = null, bd = 64;
+  for (const q of run.spots || []) { if (q.done) continue; const d = Math.hypot(P.x - q.x, P.y - q.y); if (d < bd) { bd = d; best = q; } }
+  for (const q of run.spots || []) if (q !== best && !q.done) q.prog = Math.max(0, q.prog - dt * 2);
+  if (best) { best.prog += dt / 0.5; if (best.prog >= 1) searchSpot(best); }
+}
+function drawSpotFx(q) {
+  if (q.done || q.prog <= 0) return;
+  ctx.save(); ctx.lineWidth = 6; ctx.strokeStyle = '#0008'; ctx.beginPath(); ctx.arc(q.x, q.y - 70, 22, 0, 7); ctx.stroke();
+  ctx.strokeStyle = '#ffd54f'; ctx.beginPath(); ctx.arc(q.x, q.y - 70, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, q.prog)); ctx.stroke();
+  ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+  ctx.strokeText('뒤적뒤적…', q.x, q.y - 100); ctx.fillText('뒤적뒤적…', q.x, q.y - 100); ctx.restore();
+}
 // 괴물 거점: 방마다(복도에도 몇 곳) 괴물이 모여 어슬렁거리다가, 주인공이 다가오면 거점 전체가 몰려와요
 function makeCamps() {
   run.camps = [];
   rooms.forEach((r, k) => {
-    if (r.kind === 'start' || r.cage) return;
+    if (r.kind === 'start' || r.cage || chests.some(ch => ch.room === k)) return;
     const c = { x: (r.x + r.w / 2) * TS, y: (r.y + r.h / 2) * TS, room: k, max: 1 + run.floor * 2 + (r.kind === 'stairs' ? 3 : 0), rad: Math.min(r.w, r.h) * TS * 0.32 };
     run.camps.push(c);
     // 중간 보스: 1층은 계단 방에만(층 끝에서 만나요), 2층부터 거점마다
     for (let i = 0; i < c.max - 1; i++) campSpawn(c, i === 0 && (run.floor > 1 || r.kind === 'stairs') ? 'elite' : 'mob');
   });
+  for (const ch of chests) if (ch.gold) {   // 황금 캐비닛 지킴이: 중간 보스와 단단한 괴물
+    const c = { x: ch.x, y: ch.y + TS * 2, room: ch.room, max: 4 + run.floor * 2, rad: 110, gold: true }; run.camps.push(c);
+    for (let i = 0; i < c.max; i++) campSpawn(c, i < Math.min(3, run.floor) ? 'elite' : 'mob');
+  }
   const sx = (rooms[0].x + rooms[0].w / 2) * TS, sy = (rooms[0].y + rooms[0].h / 2) * TS;
   for (let t = 0, n = 0; t < 80 && n < run.floor + (run.floor > 1 ? 1 : 0); t++) {   // 복도 거점
     const i = pick(walkTiles); if (grid[i] !== HALL) continue;
@@ -869,7 +998,9 @@ function campSpawn(c, kind = 'mob') {
   for (let t = 0; t < 14; t++) {
     const a = Math.random() * Math.PI * 2, rr = Math.random() * c.rad, x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
     if (solidAt(x, y)) continue;
-    const e = spawnAt(kind, x, y); e.camp = c; e.state = 'idle'; e.wx = x; e.wy = y; e.idleT = Math.random() * 2; return e;
+    const e = spawnAt(kind, x, y); e.camp = c; e.state = 'idle'; e.wx = x; e.wy = y; e.idleT = Math.random() * 2;
+    if (c.gold) { e.hp = e.maxHp = e.maxHp * 1.7; e.dmg *= 1.3; e.xp *= 2; e.gold = (e.gold || 0) + 2; e.golden = true; }
+    return e;
   }
 }
 function alertCamp(c) { for (const e of enemies) if (e.camp === c && e.state !== 'chase') { e.state = 'chase'; e.hitT = Math.max(e.hitT, 0.08); } }
@@ -900,18 +1031,30 @@ function ambush(r) {
     spawnAt(k === 0 && run.floor > 1 ? 'elite' : 'mob', x, y);
   }
 }
-const dmgMul = () => B.dmg * (1 + 0.12 * P.w.power);
+const dmgMul = () => B.dmg * (1 + 0.12 * P.w.power) * (graduated() ? 1.1 : 1) * (P.w.c_athlete ? 1.3 : 1) * (P.w.grit && P.hp < P.maxHp * 0.4 ? 1 + 0.2 * P.w.grit : 1);
 function damage(e, amt, kx = 0, ky = 0, noSnd) {
   wake(e);
-  let crit = Math.random() < B.crit + 0.06 * P.w.aim + (P.cls === 'arch' ? 0.1 : 0);
-  amt *= dmgMul() * (crit ? 2 : 1);
-  e.hp -= amt; e.hitT = 0.12;
+  let crit = Math.random() < B.crit + 0.06 * P.w.aim + (P.cls === 'arch' ? 0.1 : 0) + (P.w.c_archer ? 0.15 : 0);
+  amt *= dmgMul() * (crit ? 2 + 0.25 * P.w.focus + (P.w.c_archer ? 0.5 : 0) : 1);
+  e.hp -= amt; e.hitT = 0.14;
   const kbm = e.kind === 'boss' ? 0.1 : e.kind === 'elite' ? 0.4 : 1;
-  e.kb.x += kx * kbm; e.kb.y += ky * kbm;
-  nums.push({ x: e.x + rand(-10, 10), y: e.y - e.h * e.s, t: 0.6, v: Math.round(amt), crit });
-  if (!noSnd) SND.hit();
+  e.kb.x += kx * kbm * 1.3; e.kb.y += ky * kbm * 1.3;
+  nums.push({ x: e.x + rand(-14, 14), y: e.y - e.h * e.s, t: 0.7, t0: 0.7, v: Math.round(amt), crit, vx: rand(-60, 60) });
+  // 타격감: 맞은 자리 번쩍, 화면 흔들, 아주 짧게 멈칫(히트스톱)
+  const big = crit || amt >= 30;
+  if (!noSnd || big) {
+    if (run.t - (run.sparkT || 0) > 0.03 || big) { run.sparkT = run.t; fx.push({ type: 'pic', pic: 'fx_spark', x: e.x + rand(-8, 8), y: e.y - e.h * e.s * 0.5, lift: 0, t: 0.16, dur: 0.16, s: big ? 78 : 50, spin: 1 }); }
+    shake = Math.max(shake, big ? 10 : 4);
+    hitStop(big ? 0.07 : 0.035);
+  }
+  if (!noSnd) crit ? SND.crit() : SND.hit();
 }
+let HITSTOP = 0, hitStopT = 0;
+function hitStop(t) { const now = performance.now(); if (now - hitStopT < (t < 0.05 ? 220 : 90) && t < 0.1) return; /* 작은 멈칫은 자주 걸지 않아요 */ hitStopT = now; HITSTOP = Math.max(HITSTOP, t); }
 function killEnemy(e) {
+  // 쓰러뜨릴 때: 펑 + 잠깐 멈칫, 중간 보스·함장은 크게
+  if (e.kind === 'mob') { SND.kill(); hitStop(0.04); shake = Math.max(shake, 6); }
+  else { SND.thud(); hitStop(0.2); shake = Math.max(shake, 18); fx.push({ type: 'flash', t: 0.18 }); fx.push({ type: 'pic', pic: 'fx_boom', x: e.x, y: e.y - e.h * 0.4, lift: 0, t: 0.5, dur: 0.5, s: 180 }); }
   { const away = (e.x - e.y) >= (P.x - P.y) ? 1 : -1;
     fx.push({ type: 'die', x: e.x, y: e.y, lift: 0, key: 'mon/' + e.type, h: e.h * e.s, face: e.face, dir: away, t: 0.55, dur: 0.55 }); }
   if (e.type === 'eraser' && !e.mini) for (const sgn of [-1, 1]) {
@@ -934,8 +1077,9 @@ function killEnemy(e) {
 // ════════════════ 괴물 공격 ════════════════
 function hurtP(dmg, kx = 0, ky = 0) {
   if (P.inv > 0 || P.hp <= 0) return false;
-  dmg *= (1 - 0.08 * P.w.guard) * (P.cls === 'war' ? 0.9 : 1);
-  P.hp -= dmg; P.inv = 0.5 + 0.1 * P.w.vitamin; P.hurtT = 0.3; SND.hurt(); shake = 7;
+  hitStop(0.06); shake = Math.max(shake, 12);
+  dmg *= (1 - 0.08 * P.w.guard) * (P.cls === 'war' ? 0.9 : 1) * (P.w.c_coach ? 0.85 : 1);
+  P.hp -= dmg; P.inv = 0.5 + 0.1 * P.w.vitamin + (P.w.c_nurse ? 0.3 : 0); P.hurtT = 0.3; SND.hurt(); shake = 7;
   if (kx || ky) { P.x += kx; P.y += ky; collide(P, 20); }
   return true;
 }
@@ -1223,6 +1367,8 @@ function whyNot(k) {
     if (u.cls !== P.cls) return `${CLASSES[u.cls].name} 기술이에요`;
   }
   if (u.cls && P.w[k] && u.cls !== P.cls) return `${CLASSES[u.cls].name} 기술이라 더 못 올려요`;
+  if (u.lv && !P.w[k] && P.lv < u.lv) return `Lv ${u.lv}가 되면 졸업할 수 있어요 (지금 Lv ${P.lv})`;
+  if (u.career && !P.w[k] && P.career) return '진로는 하나만 고를 수 있어요';
   if (u.req && !P.w[k] && !P.w[u.req]) return `먼저 '${UPG[u.req].name}'부터 배우면 열려요`;
   if (u.w && !P.w[k] && weaponCount() >= MAX_WEAPONS) return `공격 기술은 ${MAX_WEAPONS}개까지 들 수 있어요`;
   if (P.pts <= 0) return '레벨 업하면 점수를 받아요';
@@ -1249,6 +1395,7 @@ function makeRecs() {
 }
 
 function levelUp() {
+  if (P.xp >= P.need) fx.push({ type: 'pic', pic: 'fx_lvup', x: P.x, y: P.y - 150, lift: 0, t: 0.9, dur: 0.9, s: 70 });
   let n = 0;
   while (P.xp >= P.need) { P.lv++; P.xp -= P.need; P.need = Math.round(P.need * 1.28 + 3); P.pts++; n++; }
   if (!n) return;
@@ -1274,6 +1421,8 @@ function learn(k) {
   if (state !== 'tree' || whyNot(k)) return;
   tree.hist.push({ k, hp: P.hp });
   P.w[k]++; P.pts--;
+  if (UPG[k].career) { P.career = k; fx.push({ type: 'bigtext', text: `🏆 꿈: ${UPG[k].name}!`, t: 1.6 }); }
+  if (UPG[k].grad) fx.push({ type: 'bigtext', text: `🎓 ${UPG[k].name}!`, t: 1.6 });
   if (k === 'milk') { P.bonusHp += 15; P.hp += 35; }
   if (k === 'shoes') P.speedMul *= 1.1;
   recalc(); SND.lvup();
@@ -1284,6 +1433,7 @@ function undoLearn() {
   const h = tree.hist.pop(); if (!h) return;
   if (h.cls) { P.cls = null; P.w[h.k] = h.prev; recalc(); P.hp = Math.min(h.hp, P.maxHp); SND.coin(); tree.sel = { c: h.cls }; tree.recs = makeRecs(); renderTree(); return; }
   const k = h.k; P.w[k]--; P.pts++;
+  if (UPG[k].career) P.career = null;
   if (k === 'milk') P.bonusHp -= 15;
   if (k === 'shoes') P.speedMul /= 1.1;
   recalc(); P.hp = Math.min(h.hp, P.maxHp); SND.coin();
@@ -1300,12 +1450,19 @@ function treeLayout() {
     const a = deg(-90 + i * 72), badge = pol(a, 138);
     items.push({ kind: 'c', c, p: badge, from: [0, 0] });
     const ks = Object.keys(UPG).filter(k => UPG[k].cls === c), root = ks.find(k => !UPG[k].req);
-    const pos = { [root]: { a, p: pol(a, 214) } };
-    items.push({ kind: 'n', k: root, p: pos[root].p, from: badge, fromOwn: () => P.cls === c });
-    const t2 = ks.filter(k => UPG[k].req === root).sort((x, y) => (UPG[x].w ? 1 : 0) - (UPG[y].w ? 1 : 0));
-    t2.forEach((k, j) => { const b = a + (j ? 0.3 : -0.3); pos[k] = { a: b, p: pol(b, 290) }; items.push({ kind: 'n', k, p: pos[k].p, from: pos[root].p, fromOwn: () => P.w[root] > 0 }); });
-    ks.filter(k => UPG[k].req && UPG[k].req !== root).forEach(k => { const r = UPG[k].req, b = pos[r].a; items.push({ kind: 'n', k, p: pol(b, 362), from: pos[r].p, fromOwn: () => P.w[r] > 0 }); });
-  });
+    const kids = r => ks.filter(k => UPG[k].req === r), R = d => 214 + d * 76, pos = {};
+    const place = (k, ang, d, from, fromK) => {
+      const P2 = pol(ang, R(d)); pos[k] = { a: ang, p: P2 };
+      items.push({ kind: 'n', k, p: P2, from, fromOwn: fromK ? () => P.w[fromK] > 0 : () => P.cls === c });
+      const ch = kids(k).sort((x, y) => (UPG[x].w ? 1 : 0) - (UPG[y].w ? 1 : 0));
+      ch.forEach((q, j) => {
+        let b = ang;
+        if (UPG[q].grad) b = a;                                         // 졸업은 가지 가운데로
+        else if (ch.length > 1) b = ang + (j ? 1 : -1) * (d === 0 ? 0.3 : 0.17);
+        place(q, b, d + 1, P2, k);
+      });
+    };
+    place(root, a, 0, badge, null);  });
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   for (const it of items) { x0 = Math.min(x0, it.p[0]); x1 = Math.max(x1, it.p[0]); y0 = Math.min(y0, it.p[1]); y1 = Math.max(y1, it.p[1]); }
   const M = 52, ox = M - x0, oy = M - y0, sh = q => [q[0] + ox, q[1] + oy];
@@ -1332,7 +1489,7 @@ function renderTree() {
       svg += line(it.from, it.p, l > 0 && (it.fromOwn ? it.fromOwn() : true), col);
       const locked = !l && why && why !== '레벨 업하면 점수를 받아요';
       const cls = ['tr-n', u.w ? '' : 'pas', l ? 'has' : '', !why ? 'can' : '', l >= u.max ? 'max' : '', locked ? 'lock' : '', tree.recs.includes(it.k) ? 'rec' : '', sel.k === it.k ? 'on-sel' : ''].join(' ');
-      html += `<button class="${cls}" data-k="${it.k}" style="left:${x}px;top:${y}px;--c:${col}"><span class="e">${PIC(it.k)}</span><span class="pp">${Array.from({ length: u.max }, (_, i) => `<b class="${i < l ? 'on' : ''}"></b>`).join('')}</span></button>`;
+      html += `<button class="${cls}" data-k="${it.k}" style="left:${x}px;top:${y}px;--c:${col}"><span class="e">${PIC(icOf(it.k))}</span><span class="pp">${Array.from({ length: u.max }, (_, i) => `<b class="${i < l ? 'on' : ''}"></b>`).join('')}</span></button>`;
     }
   }
   const tray = ['#fff', '#ffd1dc', '#fff59d'].map((c, i) => `<i style="left:${20 + i * 9}%;width:${10 + i * 3}%;background:${c}"></i>`).join('');
@@ -1344,7 +1501,7 @@ function renderTree() {
   if (sel.k) {
     const k = sel.k, u = UPG[k], l = P.w[k], why = whyNot(k), C = u.cls && CLASSES[u.cls];
     const tag = C ? `<span class="tc" style="background:${C.col}">${PIC('club_' + u.cls, 'mini')} ${C.name} · ${TEACH[C.t].name}</span>` : `<span class="tc" style="background:#b8902c">⭐ 공통 · 담임 선생님</span>`;
-    side = `<div style="display:flex;gap:10px;align-items:center"><div class="ic">${PIC(k)}</div><div><div class="nm">${u.name}</div>${tag}</div></div>
+    side = `<div style="display:flex;gap:10px;align-items:center"><div class="ic">${PIC(icOf(k))}</div><div><div class="nm">${u.name}</div>${tag}</div></div>
       <div class="lvt">${u.w ? '⚔ 공격 기술' : '✨ 패시브 (늘 켜져 있어요)'} · ${l ? `${l}/${u.max}단계` : '아직 없어요'}</div>
       <div class="ds">${l >= u.max ? '최고 단계예요!' : (l ? `다음 단계: ${u.desc(l)}` : u.desc(0))}</div>
       ${why && why !== '다 배웠어요!' ? `<div class="why">${why}</div>` : ''}
@@ -1357,7 +1514,7 @@ function renderTree() {
         <span class="tc" style="background:${C.col}">${PIC('radio', 'mini')} ${TEACH[C.t].name}</span></div></div>
       <div class="ds">"${C.say}"</div>
       <div class="ds"><b>동아리 특기:</b> ${C.trait}<br><b>바로 받는 기술:</b> ${PIC(C.free, 'mini')} ${UPG[C.free].name}</div>
-      <div class="cls">${ks.map(k => `<span>${PIC(k, 'mini')} ${UPG[k].name}${UPG[k].w ? '' : ' ✨'}</span>`).join('')}</div>${btn}`;
+      <div class="cls">${ks.map(k => `<span>${PIC(icOf(k), 'mini')} ${UPG[k].name}${UPG[k].w ? '' : UPG[k].career ? ' 🏆' : UPG[k].grad ? ' 🎓' : ' ✨'}</span>`).join('')}</div>${btn}`;
   } else if (needClass()) {
     side = `<div class="nm">🎉 Lv 5! 동아리에 들어가요</div><div class="ds">📻 다섯 동아리 선생님이 무전으로 불러요.<br>빛나는 배지를 눌러 보고 마음에 드는 동아리에 들어가요.<br><br>⚾ 체육부 · 🎯 다트부 · 🩹 보건부 · 📚 문예부 · 🎨 미술부</div>`;
   } else {
@@ -1518,12 +1675,13 @@ function renderEquip() {
 }
 
 // ════════════════ 한 프레임 ════════════════
-const cdMul = () => Math.pow(0.9, P.w.alarm) * B.cd * (P.cls === 'arch' ? 0.92 : 1);
+const cdMul = () => Math.pow(0.9, P.w.alarm) * Math.pow(0.94, P.w.calc) * B.cd * (P.cls === 'arch' ? 0.92 : 1) * (P.w.c_math ? 0.85 : 1) * (P.w.c_designer ? 0.85 : 1);
 const magnetR = () => 120 * B.mag * (1 + 0.4 * P.w.magnet);
 
 function update(dt) {
   run.t += dt; run.ft += dt;
   const { dx, dy } = inputDir();
+  const px0 = P.x, py0 = P.y;
   if (P.dashT > 0) {
     P.dashT -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
     if (Math.random() < 0.7) ghosts.push({ x: P.x, y: P.y, key: heroKey(), face: P.face, t: 0.22 });
@@ -1533,9 +1691,16 @@ function update(dt) {
     if (dx - dy > 0.1) P.face = 1; else if (dx - dy < -0.1) P.face = -1;
   }
   collide(P, 20);
-  if (P.moving) P.walkT += dt;
-  P.inv -= dt; P.hurtT -= dt; P.atkT -= dt; P.joyT -= dt; P.dashCd -= dt; P.ultT -= dt;
-  const rg = B.regen + 0.8 * P.w.bandage + (P.cls === 'heal' ? 1.5 : 0); if (rg && P.hp > 0) P.hp = Math.min(P.maxHp, P.hp + rg * dt);
+  // 걸음: 화면에서 실제로 움직인 거리만큼 발을 굴려요 (위아래로 갈 땐 화면에서 덜 움직이니 천천히, 벽에 막히면 멈춰요)
+  { const sd = Math.hypot(isoX(P.x, P.y) - isoX(px0, py0), isoY(P.x, P.y) - isoY(px0, py0));
+    P.scrSpd = P.scrSpd == null ? 0 : P.scrSpd + (sd / Math.max(dt, 1e-4) - P.scrSpd) * Math.min(1, dt * 12);
+    const vxs = (isoX(P.x, P.y) - isoX(px0, py0)) / Math.max(dt, 1e-4), vys = (isoY(P.x, P.y) - isoY(px0, py0)) / Math.max(dt, 1e-4);
+    P.scrVx = (P.scrVx || 0) + (vxs - (P.scrVx || 0)) * Math.min(1, dt * 10); P.scrVy = (P.scrVy || 0) + (vys - (P.scrVy || 0)) * Math.min(1, dt * 10);
+    P.stepping = P.moving && P.dashT <= 0 && P.scrSpd > 25;
+    if (P.stepping) { const before = Math.floor(P.walkT / (4 / 12)); P.walkT += sd / 128 * (8 / 12);
+      if (Math.floor(P.walkT / (4 / 12)) !== before && P.scrSpd > 120) fx.push({ type: 'puff', x: P.x - (P.scrVx > 0 ? 14 : -14), y: P.y + 2, lift: 0, t: 0.35, dur: 0.35, s: rand(20, 30) }); } }
+  P.inv -= dt; P.hurtT -= dt; P.atkT -= dt; P.lunge = (P.lunge || 0) - dt; P.joyT -= dt; P.dashCd -= dt; P.ultT -= dt;
+  const rg = B.regen + (0.8 * P.w.bandage + (P.cls === 'heal' ? 1.5 : 0)) * (1 + 0.3 * P.w.firstaid) + (P.w.c_doctor ? 3 : 0); if (rg && P.hp > 0) P.hp = Math.min(P.maxHp, P.hp + rg * dt);
 
   const ptx = (P.x / TS) | 0, pty = (P.y / TS) | 0;
   for (let y = pty - 6; y <= pty + 6; y++) for (let x = ptx - 8; x <= ptx + 8; x++) {
@@ -1560,6 +1725,8 @@ function update(dt) {
   for (const c of chests) if (!c.open) { if (Math.hypot(P.x - c.x, P.y - c.y) < 85) { c.prog += dt / 0.6; if (c.prog >= 1) openChest(c); } else c.prog = Math.max(0, c.prog - dt * 2); }
   updateCages(dt);
   updateNpc(dt);
+  updateSpots(dt);
+  updateDoors(dt);
   if (Math.hypot(P.x - stairs.x, P.y - stairs.y) < 64) {
     if (stairs.locked) { if (!run.lockMsgT || run.t - run.lockMsgT > 3) { run.lockMsgT = run.t; toast('🔒 함장을 물리쳐야 열려요'); } }
     else return nextFloor();
@@ -1640,7 +1807,7 @@ function update(dt) {
     if (d < mr || g.pull) { g.pull = true; const sp = 520 + Math.max(0, mr - d); g.x += vx / d * sp * dt; g.y += vy / d * sp * dt; }
     if (d < 30) g.got = true;
   }
-  for (const g of gems) if (g.got) { P.xp += g.v * (1 + 0.1 * P.w.note + (hasF('haeun') ? 0.1 : 0)); SND.gem(); }
+  for (const g of gems) if (g.got) { P.xp += g.v * (1 + 0.1 * P.w.note + (P.w.c_math ? 0.3 : 0) + (hasF('haeun') ? 0.1 : 0)); SND.gem(); }
   for (const c of coins) if (c.got) { run.gold += c.v; SND.coin(); }
   gems = gems.filter(g => !g.got); coins = coins.filter(c => !c.got);
   for (const g of items) { g.t += dt; if (g.t > 0.5 && Math.hypot(P.x - g.x, P.y - g.y) < 55) { g.got = true; pickItem(g); } }
@@ -1649,13 +1816,14 @@ function update(dt) {
   for (const f of fx) { f.t -= dt; if (f.type === 'scrap') { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 600 * dt; f.rot += dt * 8; } }
   fx = fx.filter(f => f.t > 0);
   for (const g of ghosts) g.t -= dt; ghosts = ghosts.filter(g => g.t > 0);
-  for (const n of nums) { n.t -= dt; n.y -= 60 * dt; }
+  for (const n of nums) { n.t -= dt; const age = (n.t0 || 0) - n.t; n.y -= (typeof n.v === 'number' ? 160 - age * 420 : 60) * dt; if (n.vx) n.x += n.vx * dt; }
   nums = nums.filter(n => n.t > 0);
   shake *= Math.pow(0.001, dt);
   if (toastT > 0) toastT -= dt;
 
   if (P.xp >= P.need) levelUp();
-  if (P.hp <= 0) endRun(false);
+  if (P.hp <= 0) downed();
+  run.saveT = (run.saveT || 0) + dt; if (run.saveT > 10) { run.saveT = 0; saveRun(); }
 }
 
 const nearest = (maxD, n = 1) => enemies.filter(e => dist2(e, P) < maxD * maxD).sort((a, b) => dist2(a, P) - dist2(b, P)).slice(0, n);
@@ -1669,14 +1837,14 @@ function weapons(dt) {
   if (P.w.punch) cool('punch', 0.62 * Math.pow(0.9, P.w.punch - 1), () => { // 맨주먹
     const [tgt] = nearest(160); if (!tgt) return false;
     if (!P.moving) P.face = tgt.x - tgt.y >= P.x - P.y ? 1 : -1;
-    P.atkT = 0.24; SND.swing();
+    P.atkT = 0.24; SND.swing(); P.lunge = 0.12;
     const [fx_, fy_] = faceVec(P.face);
     fx.push({ type: 'pow', x: P.x + fx_ * 62, y: P.y + fy_ * 62 - TORSO, lift: TORSO, t: 0.15 });
     for (const e of enemies) { const vx = e.x - P.x, vy = e.y - P.y; if (Math.hypot(vx - fx_ * 30, vy - fy_ * 30) < 72 + e.r && vx * fx_ + vy * fy_ > -15) damage(e, 12 * wm('punch') * (1 + 0.3 * (P.w.punch - 1)), fx_ * 200, fy_ * 200); }
   });
   if (P.w.bat) cool('bat', 1.05, () => { // 야구방망이
     const lv = P.w.bat, R = 140 * (1 + 0.12 * (lv - 1));
-    P.atkT = 0.22; SND.swing();
+    P.atkT = 0.22; SND.swing(); P.lunge = 0.14;
     const [fx_, fy_] = faceVec(P.face);
     fx.push({ type: 'arc', x: P.x + fx_ * 25, y: P.y + fy_ * 25 - TORSO, lift: TORSO, face: P.face, R, t: 0.2 });
     for (const e of enemies) { const vx = e.x - P.x, vy = e.y - P.y, d = Math.hypot(vx, vy); if (d < R + e.r && vx * fx_ + vy * fy_ > -20) damage(e, 24 * wm('bat') * (1 + 0.3 * (lv - 1)), vx / (d || 1) * 260, vy / (d || 1) * 260); }
@@ -1706,10 +1874,11 @@ function weapons(dt) {
       cur = nx;
     }
     fx.push({ type: 'bolt', pts, t: 0.2 }); SND.zap();
+    for (const [bx, by] of pts.slice(1)) fx.push({ type: 'pic', pic: 'fx_elec', x: bx, y: by, lift: 0, t: 0.25, dur: 0.25, s: 54 });
   });
   if (P.w.recorder) cool('recorder', 2.4, () => { // 리코더 음파
     const R = 170 + 30 * P.w.recorder, dmg = 10 * wm('recorder') * (1 + 0.25 * (P.w.recorder - 1));
-    if (P.cls === 'heal' && P.hp > 0) { const h = 2 + P.w.recorder; P.hp = Math.min(P.maxHp, P.hp + h); nums.push({ x: P.x, y: P.y - 80, t: 0.7, v: '+' + h, big: false, heal: true }); }
+    if (P.cls === 'heal' && P.hp > 0) { const h = Math.round((2 + P.w.recorder) * (1 + 0.3 * P.w.firstaid) * (P.w.c_doctor ? 2 : 1)); P.hp = Math.min(P.maxHp, P.hp + h); nums.push({ x: P.x, y: P.y - 80, t: 0.7, v: '+' + h, big: false, heal: true }); fx.push({ type: 'pic', pic: 'fx_heal', x: P.x + 26, y: P.y - 110, lift: 0, t: 0.5, dur: 0.5, s: 34 }); }
     fx.push({ type: 'ring', x: P.x, y: P.y - 20, lift: 20, r: 30, R, dur: 0.35, t: 0.35, col: '#7fd8ff', w: 10 });
     for (const e of enemies) { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < R + e.r) damage(e, dmg, (e.x - P.x) / (d || 1) * 320, (e.y - P.y) / (d || 1) * 320, true); }
     SND.wave();
@@ -1717,7 +1886,7 @@ function weapons(dt) {
   if (P.w.paint) cool('paint', 2.6, () => { // 물감 폭탄
     const near = nearest(550, 3); const t = near.length ? pick(near) : null; if (!t) return false;
     const cols = ['#ff5c8a', '#4fc3ff', '#ffd54f', '#7ee07e', '#b67bff'];
-    puddles.push({ x: t.x, y: t.y, r: (70 + 12 * P.w.paint) * (1 + 0.15 * P.w.palette + (P.cls === 'mag' ? 0.15 : 0)), t: 3, tick: 0, dmg: 6 * wm('paint') * (1 + 0.25 * (P.w.paint - 1)), col: pick(cols) });
+    puddles.push({ x: t.x, y: t.y, r: (70 + 12 * P.w.paint) * (1 + 0.15 * P.w.palette + (P.cls === 'mag' ? 0.15 : 0) + (P.w.c_painter ? 0.3 : 0) + (P.w.c_designer ? 0.2 : 0)), t: 3 + P.w.watercolor, tick: 0, dmg: 6 * wm('paint') * (1 + 0.25 * (P.w.paint - 1)), col: pick(cols) });
     fx.push({ type: 'burst', x: t.x, y: t.y - 10, lift: 10, t: 0.25 });
   });
   if (P.w.plane) P.planeAng += DT * 2.6 * (1 + 0.1 * P.w.quick);
@@ -1725,7 +1894,7 @@ function weapons(dt) {
 }
 // 책 요정 (소환사): 내 곁에 떠 있다가 가까운 괴물에게 날아가 콕!
 function updateBooks(dt) {
-  const n = Math.min(3, 1 + Math.floor(P.w.book / 2)), every = 1.1 / (1 + 0.1 * P.w.quick);
+  const n = Math.min(5, 1 + Math.floor(P.w.book / 2) + P.w.bookworm + (P.w.c_webtoon ? 1 : 0)), every = 1.1 / (1 + 0.1 * P.w.quick);
   while (P.books.length < n) P.books.push({ x: P.x, y: P.y, st: 'home', t: Math.random() * 0.5, tgt: null, flap: Math.random() * 6 });
   P.books.forEach((b, i) => {
     b.flap += dt * 14;
@@ -1781,16 +1950,16 @@ function updateShots(dt) {
 }
 
 function openChest(c) {
-  questEv('cab');
   c.open = true; c.openT = run.t; SND.open(); shake = Math.max(shake, 5);
   const g = Math.round(rand(4, 8) * run.floor);
   for (let i = 0; i < g; i++) coins.push({ x: c.x + rand(-45, 45), y: c.y + rand(10, 55), v: 1 });
   fx.push({ type: 'burst', x: c.x, y: c.y - 40, lift: 40, t: 0.4 });
-  if (!run.clue) giveClue();
-  const n = c.gold ? 2 : 1, minR = c.gold ? 2 : Math.random() < 0.35 ? 1 : 0;
-  for (let i = 0; i < n; i++) items.push({ x: c.x + (i - (n - 1) / 2) * 56, y: c.y + 66, it: makeItem(minR), t: 0, pop: true });
+  // 황금 캐비닛: 유일 장비 + 전설 장비 + 배울 점수
+  items.push({ x: c.x - 30, y: c.y + 80, it: makeUnique(), t: 0, pop: true });
+  items.push({ x: c.x + 30, y: c.y + 80, it: makeItem(3), t: 0, pop: true });
+  P.pts++; fx.push({ type: 'bigtext', text: '👑 황금 캐비닛!', t: 1.4 });
   if (Math.random() < 0.3) { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * 0.15); }
-  setTimeout(() => toast(c.gold ? '✨ 황금 캐비닛! 좋은 장비가 쏟아졌어요' : '🗄 캐비닛에서 장비가 나왔어요!'), run.clue ? 900 : 0);
+  setTimeout(() => toast('👑 황금 캐비닛! 유일 장비와 전설 장비, 배울 점수 +1'), 600);
 }
 function nextFloor() {
   SND.stairs();
@@ -1799,7 +1968,7 @@ function nextFloor() {
   buildFloor(run.floor + 1);
 }
 function planePositions() {
-  const n = P.w.plane, out = [];
+  const n = P.w.plane ? P.w.plane + (P.w.c_webtoon ? 2 : 0) : 0, out = [];
   for (let i = 0; i < n; i++) { const a = P.planeAng + i * Math.PI * 2 / n; out.push({ i, a, x: P.x + Math.cos(a) * 130, y: P.y - TORSO + Math.sin(a) * 95 }); }
   return out;
 }
@@ -1866,6 +2035,7 @@ function drawFloor(v) {
   ctx.save(); ctx.imageSmoothingEnabled = false;
   for (let y = v.y0; y <= v.y1; y++) for (let x = v.x0; x <= v.x1; x++) {
     const g = grid[idx(x, y)]; if (g === WALL || !v.on(x, y)) continue;
+    if (roomOf[idx(x, y)] >= 0 && !rooms[roomOf[idx(x, y)]].open) { const X0 = isoX(x * TS, y * TS), Y0 = isoY(x * TS, y * TS); ctx.fillStyle = '#0c0a12'; ctx.beginPath(); ctx.moveTo(X0, Y0 - 1); ctx.lineTo(X0 + TS + 1, Y0 + TS / 2); ctx.lineTo(X0, Y0 + TS + 1); ctx.lineTo(X0 - TS - 1, Y0 + TS / 2); ctx.fill(); continue; }
     const room = g !== HALL, X = isoX(x * TS, y * TS), Y = isoY(x * TS, y * TS);
     const sw = room && roomOf[idx(x, y)] >= 0 && rooms[roomOf[idx(x, y)]].swap;   // 뒤바뀐 조각: 교실 바닥 자리에 복도 바닥
     const im = tileImg('floor_' + ((room && !sw) ? 'room' : 'hall') + ((x + y) % 2 ? '2' : ''));
@@ -1886,7 +2056,7 @@ function wallKind(tx, ty, side, ox, oy) {
 function drawCubeFloor(v) {
   const T = theme();
   for (const q of run.patches || []) {
-    if (!v.on(q.tx + 1, q.ty + 1)) continue;
+    if (!v.on(q.tx + 1, q.ty + 1) || roomHidden((q.tx + 1.5) * TS, (q.ty + 1.5) * TS)) continue;
     ctx.save(); ctx.globalAlpha = 0.42 + 0.08 * Math.sin(run.t * 1.5 + q.ph);
     ctx.fillStyle = '#15121c'; ctx.fillRect(q.tx * TS - 6, q.ty * TS - 6, TS * 3 + 12, TS * 3 + 12);
     q.cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect((q.tx + i % 3) * TS + 5, (q.ty + (i / 3 | 0)) * TS + 5, TS - 10, TS - 10); });
@@ -1894,7 +2064,7 @@ function drawCubeFloor(v) {
   }
   if (T.glow) {
     ctx.save(); ctx.strokeStyle = `rgba(90,230,255,${0.16 + 0.1 * Math.sin(run.t * 2)})`; ctx.lineWidth = 3; ctx.beginPath();
-    for (let y = v.y0; y <= v.y1; y++) for (let x = v.x0; x <= v.x1; x++) { const g = grid[idx(x, y)]; if (g === WALL || !v.on(x, y)) continue; ctx.rect(x * TS + 3, y * TS + 3, TS - 6, TS - 6); }
+    for (let y = v.y0; y <= v.y1; y++) for (let x = v.x0; x <= v.x1; x++) { const g = grid[idx(x, y)]; if (g === WALL || !v.on(x, y) || (roomOf[idx(x, y)] >= 0 && !rooms[roomOf[idx(x, y)]].open)) continue; ctx.rect(x * TS + 3, y * TS + 3, TS - 6, TS - 6); }
     ctx.stroke(); ctx.restore();
   }
 }
@@ -1952,6 +2122,14 @@ function drawDeco(o, alpha) {
     const N = [isoX(x0, y0), isoY(x0, y0)], E = [isoX(x1, y0), isoY(x1, y0)], S = [isoX(x1, y1), isoY(x1, y1)], Wp = [isoX(x0, y1), isoY(x0, y1)];
     const face = (A, B, im) => { if (!im) return; ctx.save(); ctx.transform(1, (B[1] - A[1]) / (B[0] - A[0]), 0, 1, A[0], A[1] - h); ctx.drawImage(im, 0, 0, B[0] - A[0], h); ctx.restore(); };
     face(Wp, S, IMG[`props/box_${o.k}_f`]); face(S, E, IMG[`props/box_${o.k}_s`]);
+    if (o.opened) {   // 뒤진 칸은 문이 열려 어두운 안쪽이 보여요
+      const nn = SEARCH[o.k].n, fw = S[0] - Wp[0];
+      ctx.save(); ctx.transform(1, (S[1] - Wp[1]) / fw, 0, 1, Wp[0], Wp[1] - h);
+      o.opened.forEach((on, i) => { if (!on) return; const x0 = i * fw / nn;
+        if (o.k === 'lockers') { ctx.fillStyle = '#0a2526'; ctx.fillRect(x0 + 4, 5, fw / nn - 8, h - 12); ctx.fillStyle = '#1fa39d'; ctx.fillRect(x0 - 2, 3, 6, h - 8); }
+        else { ctx.fillStyle = '#2a1a10'; ctx.fillRect(x0 + fw / nn * 0.25, h * 0.35, fw / nn * 0.5, h * 0.25); } });
+      ctx.restore();
+    }
     ctx.fillStyle = P_.box.top; ctx.strokeStyle = P_.box.edge; ctx.lineWidth = 3; ctx.lineJoin = 'round';
     ctx.beginPath(); [N, E, S, Wp].forEach(([x, y], i) => i ? ctx.lineTo(x, y - h) : ctx.moveTo(x, y - h)); ctx.closePath(); ctx.fill(); ctx.stroke();
   } else {
@@ -1962,6 +2140,9 @@ function drawDeco(o, alpha) {
   ctx.restore();
 }
 function drawRoomNames() {
+  const _rooms = rooms; rooms = rooms.filter(r => r.open); try { drawRoomNames0(); } finally { rooms = _rooms; }
+}
+function drawRoomNames0() {
   ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
   for (const r of rooms) {
     const x = (r.x + r.w / 2) * TS, y = (r.y + 0.8) * TS, X = isoX(x, y), Y = isoY(x, y);
@@ -1970,6 +2151,7 @@ function drawRoomNames() {
   }
 }
 function drawStairs() { // 바닥(마름모 안에서)
+  if (roomHidden(stairs.x, stairs.y)) return;
   const x = stairs.x, y = stairs.y;
   ctx.save(); ctx.globalAlpha = 0.35 + 0.2 * Math.sin(run.t * 4); ctx.fillStyle = stairs.locked ? '#ff5252' : '#fff59d';
   ctx.beginPath(); ctx.ellipse(x, y, 80, 80, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -1978,12 +2160,39 @@ function drawStairs() { // 바닥(마름모 안에서)
   ctx.strokeStyle = '#4a4036'; ctx.lineWidth = 4; ctx.strokeRect(x - 50, y - 50, 100, 100);
 }
 function drawStairsLabel() {
+  if (roomHidden(stairs.x, stairs.y)) return;
   const x = stairs.x, y = stairs.y;
   let ly = y - 52;
   { const im = IMG['ui/stairs']; if (im) { const w = 150, h = im.height * w / im.width; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(im, x - w / 2, y + 30 - h, w, h); ctx.restore(); ly = y + 30 - h - 12; } }
   ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
   const label = stairs.locked ? '🔒 옥상' : run.floor === FLOORS ? '옥상 ▲' : '계단 ▲';
   ctx.strokeText(label, x, ly); ctx.fillText(label, x, ly);
+}
+// 캐비닛: 문 하나짜리 상자 (앞면은 왼쪽 아래, 옆면은 오른쪽 아래), 열리면 문이 앞으로 활짝
+const CAB = { hw: 0.46 * TS, h: 112 };
+function cabTex(n, gold) { const im = IMG['props/box_' + n]; if (!im) return null; return gold ? recolor('cab' + n, im, [-130, 1.7, 1.2]) : im; }
+function drawCabinet(c) {
+  const x0 = c.x - CAB.hw, x1 = c.x + CAB.hw, y0 = c.y - CAB.hw, y1 = c.y + CAB.hw, h = CAB.h;
+  const P2 = (x, y) => [isoX(x, y), isoY(x, y)], N = P2(x0, y0), E = P2(x1, y0), S2 = P2(x1, y1), Wp = P2(x0, y1);
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  // 그림자·황금빛
+  ctx.fillStyle = c.gold && !c.open ? `rgba(255,213,79,${0.25 + 0.15 * Math.sin(run.t * 4)})` : 'rgba(0,0,0,.22)';
+  ctx.beginPath(); [N, E, S2, Wp].forEach(([x, y], i) => i ? ctx.lineTo(x, y + 6) : ctx.moveTo(x, y + 6)); ctx.closePath(); ctx.fill();
+  const face = (A, B, im, hh = h) => { if (!im) return; ctx.save(); ctx.transform((B[0] - A[0]) / im.width, (B[1] - A[1]) / im.width, 0, hh / im.height, A[0], A[1] - hh); ctx.drawImage(im, 0, 0); ctx.restore(); };
+  face(Wp, S2, cabTex(c.open ? 'cab_open' : 'cab_f', c.gold)); face(S2, E, cabTex('cab_s', c.gold));
+  ctx.fillStyle = c.gold ? '#ffe08a' : '#3cc0b8'; ctx.strokeStyle = '#0b4446'; ctx.lineWidth = 3;
+  ctx.beginPath(); [N, E, S2, Wp].forEach(([x, y], i) => i ? ctx.lineTo(x, y - h) : ctx.moveTo(x, y - h)); ctx.closePath(); ctx.fill(); ctx.stroke();
+  if (c.open) {   // 문짝: 왼쪽 경첩에서 앞으로 열려요 (세계 y+ 방향)
+    const k = Math.min(1, (run.t - (c.openT || 0)) / 0.25), D = P2(x0 - 0.05 * TS, y1 + 0.84 * TS * k);
+    face(Wp, D, cabTex('cab_door', c.gold));
+  }
+  ctx.restore();
+}
+function drawChestFx(c) {
+  const x = c.x, y = c.y;
+  if (!c.open && c.prog > 0) { ctx.save(); ctx.lineWidth = 7; ctx.strokeStyle = '#0008'; ctx.beginPath(); ctx.arc(x, y - 60, 40, 0, 7); ctx.stroke();
+    ctx.strokeStyle = c.gold ? '#ffd54f' : '#7fe8ff'; ctx.beginPath(); ctx.arc(x, y - 60, 40, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, c.prog)); ctx.stroke(); ctx.restore(); }
+  if (!c.open) drawPic('star', x + Math.sin(run.t * 2) * 10, y - CAB.h - 22 + Math.sin(run.t * 4) * 4, 24, 0, 0.6 + 0.4 * Math.sin(run.t * 6));
 }
 function drawChest(c) {
   const x = c.x, y = c.y;
@@ -2022,22 +2231,34 @@ function heroAnim() {
   if (P.dashT > 0) return ['dash', 0.17 - P.dashT + 0.07];
   if (P.hurtT > 0) return ['hurt', (0.3 - P.hurtT) * 1.3];
   if (P.atkT > 0) return ['punch', 0.24 - P.atkT];
-  if (P.moving) return ['run', P.walkT];
+  if (P.stepping) {
+    // 화면에서 거의 위아래로 갈 땐 앞모습·뒷모습으로 걸어요 (하람은 아직 옆모습만)
+    if (S.char !== 'girl' && Math.abs(P.scrVy || 0) > Math.abs(P.scrVx || 0) * 1.25) return [(P.scrVy > 0 ? 'walkf' : 'walkb'), P.walkT * 1.6];
+    return [P.scrSpd < 150 ? 'walk' : 'run', P.scrSpd < 150 ? P.walkT * 1.7 : P.walkT];
+  }   // 걷기는 보폭이 짧아 더 빨리 넘겨요
   return [P.hp < P.maxHp * 0.3 ? 'tired' : 'idle', null];
 }
 function heroKey() {
   const [a, t] = heroAnim(), now = performance.now() / 1000;
   if (ANIM.name !== a) { ANIM.name = a; ANIM.t0 = now; }
+  if (S.char === 'girl' && HR[a] && IMG['hr/idle_0']) {   // 하람 전용 그림
+    const [n, fps, loop] = HR[a], el = t == null ? now - ANIM.t0 : t * (a === 'run' ? 0.75 : 1);
+    let k = Math.floor(el * fps); k = loop ? ((k % n) + n) % n : Math.max(0, Math.min(n - 1, k));
+    return `hr/${a === 'walk' ? 'run' : a}_${k}`;
+  }
   const [n, fps, loop] = YD[a], el = t == null ? now - ANIM.t0 : t;
   let k = Math.floor(el * fps);
   k = loop ? ((k % n) + n) % n : Math.max(0, Math.min(n - 1, k));
   return `yd/${a}_${k}`;
 }
-const kOf = key => key.startsWith('yd/') ? K_YD : key.startsWith('h2_') ? K_BARE : K_BAT;
+const kOf = key => key.startsWith('yd/') || key.startsWith('hr/') ? K_YD : key.startsWith('h2_') ? K_BARE : K_BAT;
 function drawHero() {
   shadow(P.x, P.y, 30);
   const key = heroKey(), blink = P.inv > 0 && P.hp > 0 && P.dashT <= 0 && P.ultT <= 0 && Math.floor(P.inv * 20) % 2;
-  drawSprite(key, P.x, P.y, kOf(key), P.face, blink ? 0.45 : 1, false, charOf().tint || undefined);
+  // 발이 땅을 디딜 때마다 살짝 통통 (8장 한 바퀴에 두 걸음)
+  const bob = P.stepping ? Math.abs(Math.sin(P.walkT / (8 / 12) * Math.PI * 2)) * 3 : 0;
+  const lg = P.lunge > 0 ? Math.sin(P.lunge / 0.14 * Math.PI) * 9 * P.face : 0;   // 휘두를 때 앞으로 쑥
+  drawSprite(key, P.x + lg, P.y - bob, kOf(key), key.startsWith('yd/walk') && key[7] !== '_' ? 1 : P.face, blink ? 0.45 : 1, false, key.startsWith('hr/') ? undefined : charOf().tint || undefined);
   drawHeroHp();
 }
 // 머리 위 체력바: 깎인 만큼 흰 띠가 천천히 따라 줄어요. 많으면 초록, 반쯤 노랑, 적으면 빨강
@@ -2094,6 +2315,7 @@ function drawEnemy(e) {
       ctx.save(); ctx.globalAlpha = alpha; ctx.translate(e.x + ox + dx, e.y - bob - z + dy); ctx.rotate(rot); if (skew) ctx.transform(1, 0, skew, 1, 0, 0);
       ctx.scale(flip * sx, sy);
       if (e.slowT > 0) ctx.filter = 'sepia(.5) hue-rotate(160deg)';
+      else if (e.golden) ctx.filter = 'sepia(.6) saturate(2.2) brightness(1.05)';
       if (e.fuse && Math.floor(run.t * (6 + 20 * (1 - e.wind))) % 2) ctx.filter = 'brightness(1.8) sepia(1) hue-rotate(-30deg)';
       ctx.drawImage(im, -W / 2, -H, W, H);
       if (e.hitT > 0 || glow) { ctx.globalAlpha = alpha * (e.hitT > 0 ? 0.6 : glow); ctx.filter = e.hitT > 0 ? 'brightness(3)' : 'brightness(1.8) sepia(1) hue-rotate(-40deg) saturate(4)'; ctx.drawImage(im, -W / 2, -H, W, H); }
@@ -2102,6 +2324,7 @@ function drawEnemy(e) {
     if (e.dash) { paint(0.18, -e.dash.vx * 0.05 + e.dash.vy * 0.05, -(e.dash.vx + e.dash.vy) * 0.025); paint(0.32, -e.dash.vx * 0.025 + e.dash.vy * 0.025, -(e.dash.vx + e.dash.vy) * 0.0125); }
     paint(1, 0, 0);
   }
+  if (e.kind !== 'mob' && e.wind > 0) drawPic('fx_danger', e.x, e.y - e.h * e.s - 60 - (e.z || 0) + Math.sin(run.t * 20) * 3, 40);
   if (e.kind !== 'mob') {
     const w = e.kind === 'boss' ? 150 : 90, top = e.y - e.h * e.s - 18 - (e.z || 0);
     ctx.fillStyle = '#000'; ctx.fillRect(e.x - w / 2 - 2, top - 2, w + 4, 11);
@@ -2138,13 +2361,17 @@ function render() {
     else { ctx.fillStyle = '#4fc3ff'; ctx.fillRect(g.x - 5, g.y - 5, 10, 10); }
   });
   for (const c of coins) upright(c.x, c.y, 0, () => { const im = IMG['ui/coin'], sp = Math.abs(Math.cos(run.t * 4 + c.x * 0.1)); if (im) ctx.drawImage(im, c.x - 9 * sp, c.y - 14, 18 * sp + 1, 18); else { ctx.fillStyle = '#ffd54f'; ctx.fillRect(c.x - 7, c.y - 7, 14, 14); } });
-  for (const g of items) upright(g.x, g.y, 0, () => drawItem(g));
+  for (const g of items) if (!roomHidden(g.x, g.y)) upright(g.x, g.y, 0, () => drawItem(g));
   upright(stairs.x, stairs.y, 0, drawStairsLabel);
   // 3) 서 있는 것: 벽·책상·괴물·사물함·친구·나를 앞뒤 순서(x+y)대로
   const hd = P.x + P.y, hx = isoX(P.x, P.y), hy = isoY(P.x, P.y);
   const list = [];
   for (let ty = v.y0; ty <= v.y1; ty++) for (let tx = v.x0; tx <= v.x1; tx++) {
     const g = grid[idx(tx, ty)];
+    if (g === DOOR || (g === HALL && run.doors && run.doors.some(q => q.open && q.t < 0.4 && q.tiles.some(([a, b]) => a === tx && b === ty)))) {
+      const dg = run.doors.find(q => q.tiles.some(([a, b]) => a === tx && b === ty)); if (dg && v.on(tx, ty)) list.push({ d: (tx + ty + 1) * TS, f: () => drawDoorTile(dg, tx, ty) });
+      continue;
+    }
     if (g === WALL) {
       if (!v.on(tx, ty)) continue;
       if (!wallNearOpen(tx, ty)) continue;
@@ -2156,14 +2383,16 @@ function render() {
   }
   for (const o of decos) {
     const P_ = PROPS[o.k]; if (!v.on(o.tx, o.ty) && !v.on(o.tx + P_.n - 1, o.ty)) continue;
+    if (roomHidden((o.tx + 0.5) * TS, (o.ty + 0.5) * TS)) continue;
     const d = (o.tx + P_.n / 2 + o.ty + P_.d / 2) * TS, [X, Y] = decoAnchor(o);   // 긴 소품은 가운데로 앞뒤를 정해요
     const hide = d > hd && Math.abs(X - hx) < (P_.n + 1) * TS * 0.6 && Y > hy - 10 && Y - hy < HERO_H + 120;
     list.push({ d, f: () => drawDeco(o, hide ? 0.5 : 1) });
   }
-  for (const e of enemies) list.push({ d: e.x + e.y, f: () => upright(e.x, e.y, 0, () => drawEnemy(e)) });
-  for (const c of chests) list.push({ d: c.x + c.y, f: () => upright(c.x, c.y, 0, () => drawChest(c)) });
+  for (const e of enemies) if (!roomHidden(e.x, e.y)) list.push({ d: e.x + e.y, f: () => upright(e.x, e.y, 0, () => drawEnemy(e)) });
+  for (const q of run.spots || []) if (q.prog > 0 && !q.done) list.push({ d: q.x + q.y + 200, f: () => upright(q.x, q.y, 0, () => drawSpotFx(q)) });
+  for (const c of chests) if (!roomHidden(c.x, c.y)) list.push({ d: c.x + c.y, f: () => { drawCabinet(c); upright(c.x, c.y, 0, () => drawChestFx(c)); } });
   if (run.npc) list.push({ d: run.npc.x + run.npc.y, f: () => upright(run.npc.x, run.npc.y, 0, () => drawNpc(run.npc)) });
-  for (const c of cages) list.push({ d: c.x + c.y, f: () => { drawCageCube(c, false); upright(c.x, c.y, 0, () => drawCage(c, 'kid')); drawCageCube(c, true); upright(c.x, c.y, 0, () => drawCage(c, 'text')); } });
+  for (const c of cages) if (!roomHidden(c.x, c.y)) list.push({ d: c.x + c.y, f: () => { drawCageCube(c, false); upright(c.x, c.y, 0, () => drawCage(c, 'kid')); drawCageCube(c, true); upright(c.x, c.y, 0, () => drawCage(c, 'text')); } });
   for (const g of ghosts) list.push({ d: g.x + g.y - 1, f: () => upright(g.x, g.y, 0, () => drawSprite(g.key, g.x, g.y, kOf(g.key), g.face, g.t * 1.6, false, 'brightness(1.6) saturate(0) sepia(1) hue-rotate(160deg)')) });
   list.push({ d: hd, f: () => upright(P.x, P.y, 0, drawHero) });
   list.sort((a, b) => a.d - b.d);
@@ -2190,7 +2419,8 @@ function render() {
   }
   ctx.textAlign = 'center';
   for (const n of nums) upright(n.x, n.y, 60, () => {
-    ctx.font = n.crit ? 'bold 32px sans-serif' : 'bold 24px sans-serif';
+    const age = (n.t0 || n.t) - n.t, pop = typeof n.v === 'number' ? 1 + Math.max(0, 1 - age / 0.12) * (n.crit ? 0.9 : 0.5) : 1;
+    ctx.font = `900 ${Math.round((n.crit ? 34 : 25) * pop)}px sans-serif`;
     ctx.globalAlpha = Math.min(1, n.t * 2); ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = n.heal ? '#7CFC9A' : n.crit ? '#ff8a3d' : '#ffe14d';
     const t = n.crit ? n.v + '!' : n.v; ctx.strokeText(t, n.x, n.y); ctx.fillText(t, n.x, n.y);
   });
@@ -2201,6 +2431,7 @@ function render() {
   drawHUD();
 }
 function drawFx(f) {
+  if (f.type === 'die' && f.t > f.dur - 0.02 && !f.smoked) { f.smoked = true; fx.push({ type: 'smoke', x: f.x, y: f.y - 20, lift: 0, t: 0.5, dur: 0.5, s: Math.min(110, f.h * 0.9) }); }
   if (f.type === 'die') {
     const im = IMG[f.key]; if (!im) return;
     const p = 1 - f.t / f.dur, H = f.h, W = im.width * H / im.height;
@@ -2215,9 +2446,13 @@ function drawFx(f) {
     if (f.face > 0) ctx.arc(f.x, f.y, f.R * 0.8, -1.3, -1.3 + 2.6 * Math.min(1, s * 1.6));
     else ctx.arc(f.x, f.y, f.R * 0.8, Math.PI + 1.3, Math.PI + 1.3 - 2.6 * Math.min(1, s * 1.6), true);
     ctx.stroke(); ctx.restore();
-  } else if ((f.type === 'pow' || f.type === 'burst') && IMG['ui/p_burst']) {
-    const dur = f.type === 'burst' ? 0.4 : 0.15, a = f.t / dur, sz = (f.type === 'burst' ? 90 : 46) * (1.25 - a * 0.4);
-    drawPic('p_burst', f.x, f.y, sz, (1 - a) * 0.6, Math.min(1, a * 1.5));
+  } else if ((f.type === 'pow' || f.type === 'burst') && IMG['ui/fx_spark']) {
+    const dur = f.type === 'burst' ? 0.4 : 0.15, a = f.t / dur, sz = (f.type === 'burst' ? 96 : 52) * (1.25 - a * 0.4);
+    drawPic(f.type === 'burst' ? 'fx_boom' : 'fx_spark', f.x, f.y, sz, (1 - a) * 0.6, Math.min(1, a * 1.5));
+  } else if (f.type === 'puff' || f.type === 'smoke' || f.type === 'pic') {   // 흙먼지·연기·그림 효과
+    const p = 1 - f.t / f.dur;
+    if (f.spin) drawPic(f.pic, f.x, f.y, f.s * (p < 0.3 ? 0.6 + p * 2 : 1.2 - (p - 0.3) * 0.6), p * 1.2, 1 - p * 0.8);
+    else drawPic(f.pic || (f.type === 'puff' ? 'fx_dust' : 'fx_smoke'), f.x, f.y - p * (f.type === 'puff' ? 8 : 40), f.s * (0.7 + p * 0.8), 0, (1 - p) * (f.type === 'puff' ? 0.7 : 0.85));
   } else if (f.type === 'pow' || f.type === 'burst') {
     const big = f.type === 'burst' ? 2.5 : 1.2, a = f.t / (f.type === 'burst' ? 0.4 : 0.15);
     ctx.save(); ctx.globalAlpha = Math.min(1, a); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#ffb300'; ctx.lineWidth = 4; ctx.beginPath();
@@ -2243,10 +2478,15 @@ function drawFx(f) {
 }
 function drawScreenFx() {
   const W = cv.width, H = cv.height, u = DPR;
+  if (P && P.hurtT > 0) {   // 맞으면 화면 가장자리가 빨갛게 번쩍
+    const k = P.hurtT / 0.3, g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7);
+    g.addColorStop(0, 'rgba(255,0,0,0)'); g.addColorStop(1, `rgba(220,20,20,${0.45 * k})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
   for (const f of fx) {
     if (f.type === 'ultflash') { ctx.fillStyle = `rgba(255,250,220,${f.t / 0.5 * 0.7})`; ctx.fillRect(0, 0, W, H); }
+    if (f.type === 'flash') { ctx.fillStyle = `rgba(255,255,255,${f.t / 0.18 * 0.45})`; ctx.fillRect(0, 0, W, H); }
     if (f.type === 'bigtext') {
-      const p = 1 - f.t / 1.1, s = p < 0.15 ? 0.6 + p / 0.15 * 0.5 : 1.1;
+      f.dur ??= f.t; const p = Math.max(0, 1 - f.t / f.dur), s = p < 0.15 ? 0.6 + p / 0.15 * 0.5 : 1.1;
       ctx.save(); ctx.globalAlpha = Math.min(1, f.t * 3); ctx.translate(W / 2, H * 0.38); ctx.scale(s, s); ctx.rotate(-0.06);
       ctx.font = `900 ${40 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 10 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = '#ffd54f';
       ctx.strokeText(f.text, 0, 0); ctx.fillText(f.text, 0, 0); ctx.restore();
@@ -2265,23 +2505,48 @@ function shadow(x, y, w) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); c
 
 function drawHUD() {
   const W = cv.width, H = cv.height, u = DPR * Math.max(0.9, Math.min(1.3, Math.min(innerWidth, innerHeight) / 400));
-  const pad = 12 * u;
-  ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 8 * u);
-  ctx.fillStyle = '#4fc3ff'; ctx.fillRect(0, 0, W * Math.min(1, P.xp / P.need), 8 * u);
-  const bw = 140 * u, by = 16 * u;
-  ctx.fillStyle = '#000b'; ctx.fillRect(pad, by, bw + 4 * u, 18 * u);
-  ctx.fillStyle = '#e53935'; ctx.fillRect(pad + 2 * u, by + 2 * u, bw * Math.max(0, P.hp / P.maxHp), 14 * u);
-  ctx.font = `bold ${11 * u}px sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
-  ctx.fillText(`Lv ${P.lv}  ·  ❤ ${Math.max(0, Math.ceil(P.hp))}/${P.maxHp}`, pad + 6 * u, by + 13 * u);
-  ctx.font = `${13 * u}px sans-serif`;
+  const pad = 10 * u;
+  ctx.fillStyle = '#000a'; ctx.fillRect(0, 0, W, 6 * u);
+  ctx.fillStyle = '#4fc3ff'; ctx.fillRect(0, 0, W * Math.min(1, P.xp / P.need), 6 * u);
+  // 정보창: 얼굴 + 이름·호칭 + Lv + 체력 + 경험치 + 금화, 동아리 색 테두리
+  const by = 12 * u, pw = 214 * u, ph = 66 * u, col = P.cls ? CLASSES[P.cls].col : '#c9a24a';
+  const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+  px(pad + 3 * u, by, pw - 6 * u, ph, '#120e1c'); px(pad, by + 3 * u, pw, ph - 6 * u, '#120e1c');   // 계단 모서리
+  ctx.strokeStyle = col; ctx.lineWidth = 2.5 * u; ctx.strokeRect(pad + 2 * u, by + 2 * u, pw - 4 * u, ph - 4 * u);
+  px(pad + 4 * u, by + 4 * u, pw - 8 * u, 3 * u, 'rgba(255,255,255,.08)');
+  // 얼굴
+  const fx0 = pad + 7 * u, fy0 = by + 7 * u, fs = ph - 14 * u;
+  px(fx0, fy0, fs, fs, '#2a2340'); ctx.strokeStyle = '#000'; ctx.lineWidth = 2 * u; ctx.strokeRect(fx0, fy0, fs, fs);
+  { const im = S.char === 'boy' ? IMG['yd/ui_ready'] : IMG['ui/' + (S.char === 'girl' ? 'k_haram' : 'k_' + S.char)];
+    if (im) { const sh = im.height * 0.42, sw = Math.min(im.width, sh); ctx.save(); ctx.beginPath(); ctx.rect(fx0, fy0, fs, fs); ctx.clip(); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(im, (im.width - sw) / 2, 0, sw, sh, fx0 + 1 * u, fy0 + 1 * u, fs - 2 * u, fs - 2 * u); ctx.restore(); } }
+  // Lv 뱃지
+  const lvx = fx0 - 2 * u, lvy = fy0 + fs - 12 * u;
+  px(lvx, lvy, 30 * u, 14 * u, '#ffd54f'); ctx.fillStyle = '#3a2410'; ctx.font = `bold ${10 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(`Lv${P.lv}`, lvx + 15 * u, lvy + 10.5 * u);
+  // 이름 · 호칭
+  const tx = fx0 + fs + 8 * u; ctx.textAlign = 'left';
+  ctx.font = `bold ${14 * u}px sans-serif`; ctx.fillStyle = '#fff'; ctx.fillText(charOf().name, tx, by + 21 * u);
+  const nw = ctx.measureText(charOf().name).width; const title = heroTitle();
+  ctx.font = `bold ${10 * u}px sans-serif`; const tw = ctx.measureText(title).width + 10 * u;
+  px(tx + nw + 6 * u, by + 10 * u, tw, 14 * u, col); ctx.fillStyle = '#fff'; ctx.fillText(title, tx + nw + 11 * u, by + 20.5 * u);
+  // 체력
+  const bw = pw - (tx - pad) - 12 * u, hy = by + 29 * u;
+  px(tx, hy, bw, 13 * u, '#000'); px(tx + 1.5 * u, hy + 1.5 * u, (bw - 3 * u) * Math.max(0, P.hp / P.maxHp), 10 * u, P.hp / P.maxHp > 0.3 ? '#e53935' : (Math.floor(performance.now() / 250) % 2 ? '#ff3b30' : '#ff8a80'));
+  px(tx + 1.5 * u, hy + 1.5 * u, (bw - 3 * u) * Math.max(0, P.hp / P.maxHp), 3 * u, 'rgba(255,255,255,.3)');
+  ctx.font = `bold ${9.5 * u}px sans-serif`; ctx.fillStyle = '#fff'; ctx.fillText(`${Math.max(0, Math.ceil(P.hp))}/${P.maxHp}`, tx + 4 * u, hy + 10 * u);
+  // 경험치
+  const xy = hy + 16 * u; px(tx, xy, bw, 5 * u, '#000'); px(tx + 1 * u, xy + 1 * u, (bw - 2 * u) * Math.min(1, P.xp / P.need), 3 * u, '#4fc3ff');
+  // 금화 · 층 · 시간
+  { const yy = by + ph - 6 * u, im = IMG['ui/coin']; ctx.font = `bold ${11 * u}px sans-serif`; ctx.fillStyle = '#ffd54f';
+    if (im) ctx.drawImage(im, tx, yy - 10 * u, 12 * u, 12 * u); ctx.fillText(run.gold, tx + 15 * u, yy);
+    const m = Math.floor(run.ft / 60), s_ = String(Math.floor(run.ft % 60)).padStart(2, '0'); ctx.fillStyle = '#d9cfe8'; ctx.textAlign = 'right'; ctx.fillText(`${run.floor}층 ${m}:${s_}`, pad + pw - 10 * u, yy); ctx.textAlign = 'left'; }
+  ctx.font = `${13 * u}px sans-serif`; ctx.fillStyle = '#fff';
   let x = pad, row = 0;
-  for (const k in P.w) if (P.w[k]) { const im = IMG['ui/' + k], yy = by + 62 * u + row * 21 * u; if (im) { ctx.imageSmoothingEnabled = false; ctx.drawImage(im, x, yy - 15 * u, 18 * u, 18 * u); ctx.fillText(P.w[k], x + 19 * u, yy); } else ctx.fillText(UPG[k].ic + P.w[k], x, yy); x += 34 * u; if (x > pad + 170 * u) { x = pad; row++; } }
-  ctx.font = `bold ${14 * u}px sans-serif`; ctx.fillStyle = '#ffd54f';
-  { const yy = by + 37 * u, im = IMG['ui/coin']; if (im) { ctx.drawImage(im, pad, yy - 14 * u, 17 * u, 17 * u); ctx.fillText(run.gold, pad + 21 * u, yy); } else ctx.fillText(`🪙 ${run.gold}`, pad, yy); }
-  const m = Math.floor(run.ft / 60), s = String(Math.floor(run.ft % 60)).padStart(2, '0');
-  ctx.textAlign = 'center'; ctx.font = `bold ${17 * u}px sans-serif`; ctx.lineWidth = 4 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
-  ctx.strokeText(`${run.floor}층  ${m}:${s}`, W / 2, 32 * u); ctx.fillText(`${run.floor}층  ${m}:${s}`, W / 2, 32 * u);
-  { const mt = missionText(); ctx.font = `bold ${12 * u}px sans-serif`; ctx.lineWidth = 3 * u; ctx.strokeText(mt, W / 2, 50 * u); ctx.fillStyle = '#bfffe9'; ctx.fillText(mt, W / 2, 50 * u); }
+  for (const k in P.w) if (P.w[k]) { const im = IMG['ui/' + icOf(k)], yy = by + ph + 20 * u + row * 21 * u; if (im) { ctx.imageSmoothingEnabled = false; ctx.drawImage(im, x, yy - 15 * u, 18 * u, 18 * u); ctx.fillText(P.w[k], x + 19 * u, yy); } else ctx.fillText(UPG[k].ic + P.w[k], x, yy); x += 34 * u; if (x > pad + 170 * u) { x = pad; row++; } }
+  // 미션: 넓은 화면은 가운데 위, 좁은 화면은 정보창 아래
+  { const mt = missionText(), narrow = W / DPR < 640; ctx.font = `bold ${12 * u}px sans-serif`; ctx.lineWidth = 3 * u; ctx.strokeStyle = '#000';
+    const mx = narrow ? pad : W / 2, my = narrow ? by + ph + 44 * u + row * 21 * u : 26 * u; ctx.textAlign = narrow ? 'left' : 'center';
+    ctx.strokeText(mt, mx, my); ctx.fillStyle = '#bfffe9'; ctx.fillText(mt, mx, my); ctx.textAlign = 'left'; }
   drawMinimap(u);
   drawStairsHint(u);
   if (toastT > 0) {
@@ -2300,7 +2565,7 @@ let lastBtn = '';
 function updateButtons() {
   const dashPct = P.dashCd > 0 ? Math.round((1 - P.dashCd / DASH_CD()) * 100) : 100, ult = Math.floor(P.ult);
   const key = dashPct + '|' + ult + '|' + P.pts; if (key === lastBtn) return; lastBtn = key;
-  const pb = btn('pauseBtn'); pb.textContent = P.pts ? '⭐' + P.pts : '⏸'; pb.classList.toggle('has', !!P.pts);
+  const pb = btn('pauseBtn'), want = P.pts ? '⭐' + P.pts : 'pause'; if (pb.dataset.v !== want) { pb.dataset.v = want; pb.innerHTML = P.pts ? '⭐' + P.pts : '<img class="pic" src="img/ui/pausebtn.png" alt="" style="width:30px;height:30px">'; } pb.classList.toggle('has', !!P.pts);
   const d = btn('dashBtn'), u = btn('ultBtn');
   d.style.background = dashPct >= 100 ? 'rgba(60,140,200,.9)' : `conic-gradient(rgba(60,140,200,.9) ${dashPct}%, rgba(40,40,50,.85) 0)`;
   u.style.background = `conic-gradient(#ffcf3f ${ult}%, rgba(40,40,50,.85) 0)`;
@@ -2379,6 +2644,8 @@ function renderHub() {
       </div>
     </div>`;
   hub.querySelector('#goBtn').onclick = startRun;
+  { const d = loadRunSave(); if (d) { const b = document.createElement('button'); b.className = 'big'; b.id = 'resumeBtn'; b.style.cssText = 'width:100%;margin-top:6px;background:#4E9A63;font-size:17px;padding:11px 0';
+    b.textContent = `💾 이어하기 · ${d.floor}층 · Lv ${d.P.lv}`; b.onclick = resumeRun; hub.querySelector('#goBtn').parentElement.after(b); hub.querySelector('#goBtn').textContent = '새로 탐험'; } }
   hub.querySelector('#chBtn').onclick = () => openSelect('hub');
   hub.querySelector('#eqBtn').onclick = () => openEquip('hub');
   hub.querySelector('#ttlBtn').onclick = showTitle;
@@ -2395,6 +2662,7 @@ function startRun() {
   gameBtns(true);
 }
 function endRun(win) {
+  clearRun();
   state = 'over'; P.won = win; P.deadT = 0; stick.on = false;
   gameBtns(false);
   const gold = Math.round(run.gold * B.goldMul);
@@ -2421,6 +2689,48 @@ function endRun(win) {
   if (win) setTimeout(() => talk(TWIST_TALK, () => playStory(endingPanels(), () => { state = 'over'; show('msgOv'); })), 900);
   else setTimeout(() => show('msgOv'), 1100);
 }
+// ── 자동 저장: 층이 바뀔 때와 10초마다. 교실에서 "이어하기"로 그 층부터 다시 ──
+const RUN_KEY = 'school_survivor_run';
+function saveRun() {
+  if (!P || !run || P.hp <= 0 && state !== 'down') return;
+  try { localStorage.setItem(RUN_KEY, JSON.stringify({ floor: run.floor, char: S.char, at: Date.now(),
+    P: { lv: P.lv, xp: P.xp, need: P.need, pts: P.pts, w: P.w, cls: P.cls, career: P.career, bonusHp: P.bonusHp, speedMul: P.speedMul, hp: Math.max(1, P.hp) },
+    run: { gold: run.gold, kills: run.kills, saved: run.saved, newFriends: run.newFriends, met: run.met, newItems: run.newItems, quest: run.quest || null, t: run.t, revives: run.revives || 0 } })); } catch (e) {}
+}
+const loadRunSave = () => { try { return JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (e) { return null; } };
+const clearRun = () => { try { localStorage.removeItem(RUN_KEY); } catch (e) {} };
+function resumeRun() {
+  const d = loadRunSave(); if (!d) return startRun();
+  initAudio(); if (d.char) S.char = d.char;
+  newRun(); Object.assign(P, d.P); P.w = { ...Object.fromEntries(Object.keys(UPG).map(k => [k, 0])), ...d.P.w }; Object.assign(run, d.run);
+  buildFloor(d.floor); recalc(); P.hp = Math.min(P.maxHp, d.P.hp);
+  if (run.npc && run.quest) run.npc.talked = true;
+  hide('hub'); hide('msgOv'); state = 'play'; stick.on = false; lastBtn = ''; gameBtns(true);
+  setTimeout(() => toast(`💾 ${d.floor}층에서 이어서 해요`), 400);
+}
+// ── 쓰러지면: 잠깐 쓰러져 있다가 "그 자리에서 다시 일어나기" ──
+function downed() {
+  if (state !== 'play') return;
+  state = 'down'; P.deadT = 0; stick.on = false; gameBtns(false); saveRun();
+  setTimeout(() => {
+    if (state !== 'down') return;
+    const box = document.getElementById('msgOv');
+    box.innerHTML = `<h2>💫 앗, 쓰러졌어요!</h2><p>괜찮아요, 자동으로 저장해 뒀어요.<br>이 자리에서 바로 다시 일어날 수 있어요. (주변 괴물을 밀어내요)</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big" id="revBtn">💪 그 자리에서 다시 일어나기</button><button class="sub" id="giveBtn" style="padding:10px 16px">교실로 돌아가기</button></div>`;
+    box.querySelector('#revBtn').onclick = revive;
+    box.querySelector('#giveBtn').onclick = () => { hide('msgOv'); state = 'play'; endRun(false); };
+    show('msgOv');
+  }, 1300);
+}
+function revive() {
+  hide('msgOv'); run.revives = (run.revives || 0) + 1;
+  P.hp = P.maxHp; P.inv = 3; P.deadT = 0; P.joyT = 0.8; shake = 14; SND.ult();
+  fx.push({ type: 'ring', x: P.x, y: P.y - TORSO, lift: TORSO, r: 0, R: 420, dur: 0.45, t: 0.45, col: '#7CFC9A', w: 22 });
+  for (const e of enemies) { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < 400 && e.kind !== 'boss') { e.kb.x += (e.x - P.x) / (d || 1) * 1100; e.kb.y += (e.y - P.y) / (d || 1) * 1100; e.hp -= 30; e.hitT = 0.15; } }
+  eshots = []; warns = warns.filter(w => w.owner.kind === 'boss');
+  state = 'play'; gameBtns(true); lastBtn = ''; saveRun();
+  toast('💪 다시 일어났어요! 3초 동안 무적이에요');
+}
 function togglePause() {
   if (state === 'play') openTree('pause'); else if (state === 'tree') closeTree();
 }
@@ -2430,9 +2740,10 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
-  if (state === 'play') update(dt);
-  else if (state === 'over') P.deadT += dt;
-  if (P && grid && (state === 'play' || state === 'over' || state === 'tree' || state === 'equip' || (state === 'talk' && TALK.inGame))) render();
+  if (HITSTOP > 0) { HITSTOP -= dt; if (state === 'play') { shake *= Math.pow(0.02, dt); } }
+  else if (state === 'play') update(dt);
+  else if (state === 'over' || state === 'down') P.deadT += dt;
+  if (P && grid && (state === 'play' || state === 'over' || state === 'down' || state === 'tree' || state === 'equip' || (state === 'talk' && TALK.inGame))) render();
   else { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#1c1c22'; ctx.fillRect(0, 0, cv.width, cv.height); }
   requestAnimationFrame(loop);
 }
@@ -2835,7 +3146,7 @@ const callName = n => n + (((n.charCodeAt(n.length - 1) - 0xAC00) % 28) ? '아' 
 const npcName = () => S.char === 'girl' ? '민준' : '하람';
 const npcImg = () => S.char === 'girl' ? 'k_minjun' : 'k_haram';
 const QUEST = [
-  { id: 'cab', txt: '캐비닛 1개 열기 (앞에 잠깐 서 있기)' },
+  { id: 'cab', txt: '사물함·책상 서랍 뒤져 보기 (앞에 잠깐 서 있기)' },
   { id: 'bag', txt: '오른쪽 위 가방 단추로 장비 보기' },
   { id: 'kill', txt: '괴물 5마리 물리치기', n: 5 },
 ];
@@ -2855,7 +3166,8 @@ function npcTalk() {
     { w: 'me', t: '복도가… 돌아간다고?', f: 'tired' },
     { w: 'npc', t: '응, 교실이 미로가 됐어. 그리고 저쪽 방마다 시험지 괴물들이 떼로 모여 있어! 가까이 가면 몰려오니까 조심해.' },
     { w: 'npc', t: '처음엔 천천히 몸부터 풀자. 내가 시작 미션 줄게!' },
-    { w: 'npc', t: '① 캐비닛을 열어 봐. 앞에 잠깐 서 있으면 열려. 장비가 나올 거야.' },
+    { w: 'npc', t: '① 사물함이나 책상 서랍, 쓰레기통까지 뒤져 봐! 앞에 잠깐 서 있으면 뒤져져. 장비가 숨어 있을 수도 있어.' },
+    { w: 'npc', t: '교실은 문을 열어야 안이 보여. 그리고… 반짝이는 황금 캐비닛엔 엄청난 게 들었는데, 센 괴물들이 지키고 있대!' },
     { w: 'npc', t: '② 오른쪽 위 가방 단추를 눌러서 장비를 껴 봐. ③ 그다음 괴물 5마리만 혼내 주자!' },
     { w: 'me', t: '좋아, 해 볼게!', f: 'joy' },
   ], () => { run.quest = { step: 0, kills0: run.kills }; toast('🧭 시작 미션: ' + QUEST[0].txt); });
@@ -2870,6 +3182,31 @@ function questEv(id) {
     fx.push({ type: 'bigtext', text: '🧭 시작 미션 완료!', t: 1.3 });
     toast(`${npcName()}: 최고야! 금화 +20, 배울 점수 +1 · 이제 계단을 찾아 올라가자!`);
   } else toast('🧭 다음 미션: ' + QUEST[q.step].txt);
+}
+function openDoor(g) {
+  if (g.open) return; g.open = true; g.t = 0; SND.open();
+  for (const [x, y] of g.tiles) grid[idx(x, y)] = HALL;
+  const r = rooms[g.room]; if (!r.open) { r.open = true; r.revealT = run.t; }
+  walkTiles = []; for (let i = 0; i < GW * GH; i++) if (grid[i] === ROOM || grid[i] === HALL) walkTiles.push(i);
+  computeFlow(); miniDirty = true;
+}
+function updateDoors(dt) {
+  for (const g of run.doors || []) { if (g.open) { g.t += dt; continue; }
+    for (const [x, y] of g.tiles) if (Math.hypot(P.x - (x + 0.5) * TS, P.y - (y + 0.5) * TS) < 100) { openDoor(g); break; } }
+  const k = roomOf[idx((P.x / TS) | 0, (P.y / TS) | 0)]; if (k >= 0 && !rooms[k].open) { rooms[k].open = true; rooms[k].revealT = run.t; }
+}
+const roomHidden = (x, y) => { const k = roomOf[idx((x / TS) | 0, (y / TS) | 0)]; return k >= 0 && rooms[k] && !rooms[k].open; };
+// 미닫이문: 벽 높이 문짝 (열리면 위로 스르륵 사라져요)
+function drawDoorTile(g, tx, ty) {
+  const k = g.open ? Math.max(0, 1 - g.t / 0.35) : 1; if (k <= 0) return;
+  const x0 = tx * TS, y0 = ty * TS, x1 = x0 + TS, y1 = y0 + TS, h = WALL_H * k;
+  const P2 = (x, y) => [isoX(x, y), isoY(x, y)], N = P2(x0, y0), E = P2(x1, y0), S2 = P2(x1, y1), Wp = P2(x0, y1);
+  ctx.save(); ctx.globalAlpha = k; ctx.imageSmoothingEnabled = false;
+  const im = tileImg('wall_door'), imr = tileImg('wall_door_r');
+  const face = (A, B, img) => { if (!img) return; ctx.save(); ctx.transform(1, (B[1] - A[1]) / (B[0] - A[0]), 0, 1, A[0], A[1] - h); ctx.drawImage(img, 0, 0, B[0] - A[0], h); ctx.restore(); };
+  face(Wp, S2, im); face(S2, E, imr);
+  ctx.fillStyle = '#5a4630'; ctx.beginPath(); [N, E, S2, Wp].forEach(([x, y], i) => i ? ctx.lineTo(x, y - h) : ctx.moveTo(x, y - h)); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 function updateNpc(dt) {
   const n = run.npc; if (!n) return; n.t += dt;
@@ -2893,7 +3230,7 @@ function drawNpc(n) {
 function missionText() {
   if (run.quest && !run.quest.done) { const q = run.quest, Q = QUEST[q.step]; return `🧭 시작 미션 ${q.step + 1}/${QUEST.length}: ${Q.txt}${Q.n ? ` (${Math.min(Q.n, run.kills - q.kills0)}/${Q.n})` : ''}`; }
   if (run.npc && !run.npc.talked) return `🧭 ${npcName()}에게 가서 말 걸기 (노란 ! 표시)`;
-  const a = run.clue ? '단서 ✔' : '단서: 캐비닛 열기';
+  const a = run.clue ? '단서 ✔' : '단서: 사물함·서랍 뒤지기';
   const freed = cages.filter(c => c.st === 'free').length;
   const b = cages.length ? ` · 친구 ${freed}/${cages.length}` : '';
   const c = run.floor === FLOORS ? (run.bossDead ? '옥상으로!' : '함장 물리치기') : '계단 찾기';

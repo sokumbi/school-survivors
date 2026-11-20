@@ -8,9 +8,9 @@ import numpy as np
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PATTERNS = ['img/yd/*.png', 'img/mon/*.png', 'img/ui/*.png', 'img/props/*.png', 'img/start_ufo.png']
+PATTERNS = ['img/hr/*.png', 'img/yd/*.png', 'img/mon/*.png', 'img/ui/*.png', 'img/props/*.png', 'img/start_ufo.png']
 SKIP = ('box_',)
-KEEP_GRAY = ('shoes', 'i_slipper', 'i_hoodie', 'i_beanie', 'stairs', 'p_cube', 'trash', 'lock')   # 회색이 원래 색인 그림은 갇힌 바탕 지우기를 건너뛰어요
+KEEP_GRAY = ('milk', 'note', 'i_coat', 'mannequin', 'shoes', 'i_slipper', 'i_hoodie', 'i_beanie', 'stairs', 'p_cube', 'trash', 'lock')   # 회색이 원래 색인 그림은 갇힌 바탕 지우기를 건너뛰어요
 
 
 def bgish(rgb):
@@ -43,6 +43,18 @@ def clean(path):
         a = im[..., 3] > 0; p = np.pad(a, 1)
         edge = a & ~(p[:-2, 1:-1] & p[2:, 1:-1] & p[1:-1, :-2] & p[1:-1, 2:])
         kill = edge & light
+        if not kill.any(): break
+        im[kill, 3] = 0; n2 += int(kill.sum())
+    # 3) 스티커처럼 외곽선 바깥에 붙은 흰 테두리: 가장자리의 밝은 점 중 3칸 안에 어두운 외곽선이 있는 것만 (평평하게 잘린 흰 옷은 남아요)
+    for _ in range(4):
+        rgb = im[..., :3].astype(int); a_ = im[..., 3] > 0
+        dark = a_ & (rgb.max(2) < 110)
+        near = dark.copy()
+        for _r in range(3):
+            q = np.pad(near, 1); near = near | q[:-2, 1:-1] | q[2:, 1:-1] | q[1:-1, :-2] | q[1:-1, 2:]
+        lt = (rgb.min(2) >= 190) & (rgb.max(2) - rgb.min(2) <= 45)
+        p = np.pad(a_, 1); edge = a_ & ~(p[:-2, 1:-1] & p[2:, 1:-1] & p[1:-1, :-2] & p[1:-1, 2:])
+        kill = edge & lt & near
         if not kill.any(): break
         im[kill, 3] = 0; n2 += int(kill.sum())
     Image.fromarray(im).save(path)

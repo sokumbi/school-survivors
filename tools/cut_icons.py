@@ -19,10 +19,13 @@ SHEETS = {
     'props2':  [['p_eraser', 'p_ball', 'p_ruler', 'p_plane'], ['p_book', 'p_chalk', 'p_cube', 'locker'], ['locker_open', 'stairs', 'p_burst', 'p_spark']],
     'portraits2': [['t_sci', 't_music', 't_food'], ['t_fake', 't_principal', 't_captain']],
     'title_ufo': [['ufo']],
+    'skills3': [['stamina', 'grit', 'focus', 'calc'], ['diet', 'firstaid', 'bookworm', 'poem'], ['watercolor', 'sketch', 'gradcap', 'diploma']],
+    'careers': [['c_athlete', 'c_coach', 'c_archer', 'c_math'], ['_d1', '_d2', '_d3', '_d4'], ['c_doctor', 'c_nurse', 'c_writer', 'c_webtoon'], ['c_painter', 'c_designer', 'nameplate', 'trophy']],
+    'fx2': [['fx_spark', 'fx_boom', 'fx_dust', 'fx_elec'], ['fx_heal', 'fx_lvup', 'fx_wave', 'fx_paint'], ['pausebtn', 'fx_danger', 'fx_smoke', 'fx_star']],
     'equip2':  [['i_glove', 'i_mitt', 'i_workglove', 'i_mitten'], ['i_backpack', 'i_crossbag', 'i_duffel', 'i_lunchbag'], ['ult', 'bagicon', 'pouch', 'mannequin']],
 }
 MAXW = {'teachers': 220, 'kids': 220, 'portraits2': 220, 'title_ufo': 420, 'props2': 160}
-BGMIN = {'items': 160, 'props2': 160}   # 저장 크기(긴 변). 나머지 아이콘은 128
+BGMIN = {'items': 160, 'props2': 160, 'skills3': 160, 'careers': 160}   # 저장 크기(긴 변). 나머지 아이콘은 128
 
 
 def dilate(m):

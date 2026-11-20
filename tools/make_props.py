@@ -80,7 +80,28 @@ def desk(n=2, h=8):
     return f, s
 
 
+def cabinet(h=25):
+    """캐비닛(문 하나): 앞면 닫힘·열림(안쪽), 옆면, 문짝"""
+    OL, BODY, DK, HI = '#0b4446', '#1fa39d', '#157a76', '#5fd3c9'
+    f = canvas(16, h, BODY)
+    rect(f, 1, 1, 15, 2, HI)
+    for vy in (4, 6, 8): rect(f, 4, vy, 12, vy + 1, DK)
+    rect(f, 12, h // 2 - 1, 13, h // 2 + 3, '#ffd54f')
+    rect(f, 3, h - 6, 13, h - 5, DK); rect(f, 0, h - 2, 16, h, DK); border(f, OL)
+    o = canvas(16, h, '#123f3f'); rect(o, 2, 2, 14, h - 2, '#0a2526')
+    for sy in (8, 16): rect(o, 2, sy, 14, sy + 1, '#2c6f6c')
+    for (x, y) in ((5, 5), (10, 11), (7, 19), (11, 4), (4, 13)): rect(o, x, y, x + 1, y + 1, '#ffe27a')
+    border(o, OL)
+    sd = canvas(16, h, '#16827d'); rect(sd, 0, h - 2, 16, h, '#0f5f5b'); border(sd, OL)
+    door = canvas(16, h, BODY); rect(door, 0, 0, 16, 1, HI)
+    for vy in (4, 6, 8): rect(door, 4, vy, 12, vy + 1, DK)
+    border(door, OL)
+    return f, o, sd, door
+
+
 def main():
+    f, o, sd, door = cabinet()
+    for n, im in (('cab_f', f), ('cab_open', o), ('cab_s', sd), ('cab_door', door)): im.save(os.path.join(OUT, f'box_{n}.png'))
     for k, fn in {'lockers': lockers, 'shelf': shelf, 'tdesk': tdesk, 'desk': desk}.items():
         f, s = fn(); f.save(os.path.join(OUT, f'box_{k}_f.png')); s.save(os.path.join(OUT, f'box_{k}_s.png'))
     print('ok')
