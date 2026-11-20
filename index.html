@@ -6,11 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#16161c">
 <title>학교 서바이버</title>
-<!-- 한글 픽셀 글꼴 갈무리 (SIL OFL), 못 읽으면 기본 글꼴 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <style>
   html,body{margin:0;height:100%;background:#16161c;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;
-    font-family:Galmuri11,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#fff;-webkit-tap-highlight-color:transparent}
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#fff;-webkit-tap-highlight-color:transparent}
   canvas{display:block;width:100vw;height:100vh}
   .ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
     background:rgba(12,12,20,.8);text-align:center;padding:max(12px,env(safe-area-inset-top)) 16px 12px;box-sizing:border-box;overflow:auto}
@@ -405,7 +403,6 @@ const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0
   trip: [5, 10, 0], ko: [5, 8, 0], getup: [5, 8, 0], dizzy: [4, 5, 1], tired: [4, 4, 1], joy: [5, 8, 0], victory: [5, 6, 0] };
 const K_YD = HERO_H / 132;
 async function loadAll() {
-  try { await Promise.race([document.fonts.load('16px Galmuri11'), document.fonts.load('bold 16px Galmuri11'), new Promise(r => setTimeout(r, 1500))]); } catch (e) {}
   SPR = await fetch('img/sprites.json').then(r => r.json());
   for (const a in YD) for (let k = 0; k < YD[a][0]; k++) SPR[`yd/${a}_${k}`] = { ax: 110, ay: 178 };
   for (const k in PROPS) { if (PROPS[k].box) { SPR[`props/box_${k}_f`] = SPR[`props/box_${k}_s`] = { ax: 0, ay: 0 }; } else SPR['props/' + k] = { ax: 0, ay: 0 }; }
@@ -712,7 +709,7 @@ function buildFloor(n) {
   mini = document.createElement('canvas'); mini.width = GW * 3; mini.height = GH * 3; miniDirty = true;
   const s = rooms[0];
   P.x = (s.x + s.w / 2) * TS; P.y = (s.y + s.h / 2) * TS;
-  computeFlow(); applyTheme(); run.bossT = null; run.bossEnd = null;
+  computeFlow(); applyTheme(); run.bossT = null; run.bossEnd = null; makeCamps();
   toast(n === FLOORS ? `${n}층 · ${theme().name} · 옥상 문을 함장이 지켜요!` : `${n}층 · ${theme().name} · 계단을 찾아 올라가요!`);
 }
 
@@ -847,7 +844,40 @@ function spawnAt(kind, x, y, type) {
   }
   enemies.push(e); return e;
 }
+// 괴물 거점: 방마다(복도에도 몇 곳) 괴물이 모여 어슬렁거리다가, 주인공이 다가오면 거점 전체가 몰려와요
+function makeCamps() {
+  run.camps = [];
+  rooms.forEach((r, k) => {
+    if (r.kind === 'start' || r.cage) return;
+    const c = { x: (r.x + r.w / 2) * TS, y: (r.y + r.h / 2) * TS, room: k, max: 4 + run.floor * 2 + (r.kind === 'stairs' ? 3 : 0), rad: Math.min(r.w, r.h) * TS * 0.32 };
+    run.camps.push(c);
+    for (let i = 0; i < c.max - 1; i++) campSpawn(c, i === 0 && (run.floor > 1 || Math.random() < 0.5) ? 'elite' : 'mob');
+  });
+  const sx = (rooms[0].x + rooms[0].w / 2) * TS, sy = (rooms[0].y + rooms[0].h / 2) * TS;
+  for (let t = 0, n = 0; t < 80 && n < 2 + run.floor; t++) {   // 복도 거점
+    const i = pick(walkTiles); if (grid[i] !== HALL) continue;
+    const x = (i % GW + 0.5) * TS, y = (((i / GW) | 0) + 0.5) * TS;
+    if (Math.hypot(x - sx, y - sy) < 900 || run.camps.some(c => Math.hypot(c.x - x, c.y - y) < 500)) continue;
+    const c = { x, y, room: -1, max: 3 + run.floor, rad: 70 }; run.camps.push(c); n++;
+    for (let j = 0; j < c.max; j++) campSpawn(c, 'mob');
+  }
+}
+function campSpawn(c, kind = 'mob') {
+  for (let t = 0; t < 14; t++) {
+    const a = Math.random() * Math.PI * 2, rr = Math.random() * c.rad, x = c.x + Math.cos(a) * rr, y = c.y + Math.sin(a) * rr;
+    if (solidAt(x, y)) continue;
+    const e = spawnAt(kind, x, y); e.camp = c; e.state = 'idle'; e.wx = x; e.wy = y; e.idleT = Math.random() * 2; return e;
+  }
+}
+function alertCamp(c) { for (const e of enemies) if (e.camp === c && e.state !== 'chase') { e.state = 'chase'; e.hitT = Math.max(e.hitT, 0.08); } }
+function wake(e) { if (e.state === 'chase') return; if (e.camp) alertCamp(e.camp); else e.state = 'chase'; }
 function spawnFar() {
+  // 대부분은 비어 가는 거점을 다시 채우고, 가끔은 떠돌이가 쫓아와요
+  if (run.camps && Math.random() > 0.15) {
+    const cs = run.camps.filter(c => Math.hypot(c.x - P.x, c.y - P.y) > 650 && enemies.filter(e => e.camp === c).length < c.max);
+    if (cs.length) { campSpawn(pick(cs)); return; }
+    if (Math.random() < 0.7) return;
+  }
   for (let k = 0; k < 25; k++) {
     const i = walkTiles[(Math.random() * walkTiles.length) | 0];
     if (flow[i] < 0) continue;
@@ -856,7 +886,9 @@ function spawnFar() {
   }
 }
 function ambush(r) {
-  const n = 5 + run.floor * 3 + (r.kind === 'stairs' ? 4 : 0);
+  // 방에 들어오면 그 방 거점이 깨어나요 (예전처럼 새로 튀어나오는 괴물은 조금만)
+  const k = rooms.indexOf(r); for (const c of run.camps || []) if (c.room === k) alertCamp(c);
+  const n = r.kind === 'stairs' ? 4 : 1;
   for (let k = 0; k < n; k++) {
     const x = (r.x + 0.5 + Math.random() * (r.w - 1)) * TS, y = (r.y + 0.5 + Math.random() * (r.h - 1)) * TS;
     if (solidAt(x, y) || Math.hypot(x - P.x, y - P.y) < 240) continue;
@@ -865,6 +897,7 @@ function ambush(r) {
 }
 const dmgMul = () => B.dmg * (1 + 0.12 * P.w.power);
 function damage(e, amt, kx = 0, ky = 0, noSnd) {
+  wake(e);
   let crit = Math.random() < B.crit + 0.06 * P.w.aim + (P.cls === 'arch' ? 0.1 : 0);
   amt *= dmgMul() * (crit ? 2 : 1);
   e.hp -= amt; e.hitT = 0.12;
@@ -1149,13 +1182,13 @@ function drawCage(c, part) {
   }
   // 이름표와 말풍선
   const msg = free ? '고마워!' : c.st === 'guard' && c.guards.length ? '조심해!' : c.st === 'guard' ? '옆에 와 줘!' : '도와줘!';
-  ctx.font = 'bold 21px Galmuri11, sans-serif'; ctx.textAlign = 'center';
+  ctx.font = 'bold 21px sans-serif'; ctx.textAlign = 'center';
   const by = y - 200 + Math.sin(c.t * 4) * 4 + (free ? -c.t * 30 : 0), w = ctx.measureText(msg).width + 22;
   ctx.globalAlpha = free ? Math.max(0, 1 - (c.t - 1.6) / 0.8) : 1;
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(x - w / 2, by - 23, w, 34, 13); ctx.fill();
   ctx.beginPath(); ctx.moveTo(x - 6, by + 10); ctx.lineTo(x + 6, by + 10); ctx.lineTo(x, by + 18); ctx.fill();
   ctx.fillStyle = '#222'; ctx.fillText(msg, x, by + 1);
-  ctx.font = 'bold 19px Galmuri11, sans-serif'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = c.f ? '#ffd54f' : '#fff';
+  ctx.font = 'bold 19px sans-serif'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = c.f ? '#ffd54f' : '#fff';
   ctx.strokeText(c.label, x, y + 66); ctx.fillText(c.label, x, y + 66);
   ctx.globalAlpha = 1;
 }
@@ -1539,6 +1572,24 @@ function update(dt) {
   // 괴물
   const planes = planePositions();
   for (const e of enemies) {
+    if (e.state === 'idle' || e.state === 'back') {
+      const dp = Math.hypot(P.x - e.x, P.y - e.y);
+      if (dp < 400 && P.hp > 0) { wake(e); }
+      else {
+        const ox0 = e.x, oy0 = e.y; e.age = (e.age || 0) + dt;
+        let tx = e.wx, ty = e.wy, spd = e.sp * 0.32;
+        if (e.state === 'back') { tx = e.camp.x; ty = e.camp.y; spd = e.sp * 0.8; if (Math.hypot(tx - e.x, ty - e.y) < e.camp.rad) e.state = 'idle'; }
+        const vx = tx - e.x, vy = ty - e.y, d = Math.hypot(vx, vy);
+        if (e.state === 'idle' && d < 10) { e.idleT -= dt; if (e.idleT <= 0) { const a = Math.random() * Math.PI * 2, rr = Math.random() * e.camp.rad; e.wx = e.camp.x + Math.cos(a) * rr; e.wy = e.camp.y + Math.sin(a) * rr; e.idleT = 1 + Math.random() * 2.5; } }
+        else if (d > 1) { e.x += (vx / d * spd + e.kb.x) * dt; e.y += (vy / d * spd + e.kb.y) * dt; if (Math.abs(vx - vy) > 4) e.face = vx - vy > 0 ? 1 : -1; }
+        e.kb.x *= Math.pow(0.002, dt); e.kb.y *= Math.pow(0.002, dt);
+        collide(e, Math.min(e.r * 0.6, 28));
+        e.vxs = (e.vxs || 0) + ((e.x - ox0) / dt - (e.vxs || 0)) * 0.25; e.vys = (e.vys || 0) + ((e.y - oy0) / dt - (e.vys || 0)) * 0.25;
+        e.walkT += dt; e.hitT -= dt; e.atkT -= dt; e.slowT -= dt; e.relT = (e.relT || 0) - dt;
+        continue;
+      }
+    }
+    if (e.camp && e.kind !== 'boss' && Math.hypot(P.x - e.camp.x, P.y - e.camp.y) > 1200 && Math.hypot(P.x - e.x, P.y - e.y) > 750) { e.state = 'back'; continue; }
     let gx = P.x, gy = P.y;
     const etx = (e.x / TS) | 0, ety = (e.y / TS) | 0, ei = walk(etx, ety) ? idx(etx, ety) : -1, d0 = ei >= 0 ? flow[ei] : -1;
     if (d0 > 1) {
@@ -1902,7 +1953,7 @@ function drawDeco(o, alpha) {
   ctx.restore();
 }
 function drawRoomNames() {
-  ctx.font = 'bold 22px Galmuri11, sans-serif'; ctx.textAlign = 'center';
+  ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
   for (const r of rooms) {
     const x = (r.x + r.w / 2) * TS, y = (r.y + 0.8) * TS, X = isoX(x, y), Y = isoY(x, y);
     if (X < view.x - 300 || X > view.x + cv.width / view.z + 300 || Y < view.y - 100 || Y > view.y + cv.height / view.z + 100) continue;
@@ -1921,7 +1972,7 @@ function drawStairsLabel() {
   const x = stairs.x, y = stairs.y;
   let ly = y - 52;
   { const im = IMG['ui/stairs']; if (im) { const w = 150, h = im.height * w / im.width; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(im, x - w / 2, y + 30 - h, w, h); ctx.restore(); ly = y + 30 - h - 12; } }
-  ctx.font = 'bold 22px Galmuri11, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
   const label = stairs.locked ? '🔒 옥상' : run.floor === FLOORS ? '옥상 ▲' : '계단 ▲';
   ctx.strokeText(label, x, ly); ctx.fillText(label, x, ly);
 }
@@ -1941,7 +1992,7 @@ function drawChest(c) {
   if (c.open) { ctx.fillStyle = '#1d2326'; ctx.fillRect(x - 24, y - 68, 48, 66); return; }
   ctx.fillStyle = '#26363a'; for (let i = 0; i < 3; i++) ctx.fillRect(x - 18, y - 60 + i * 7, 36, 2);
   ctx.fillStyle = '#ffd54f'; ctx.fillRect(x + 15, y - 34, 5, 11);
-  ctx.save(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(run.t * 6); ctx.font = '26px Galmuri11, sans-serif'; ctx.textAlign = 'center';
+  ctx.save(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(run.t * 6); ctx.font = '26px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('✨', x, y - 82 + Math.sin(run.t * 4) * 4); ctx.restore();
 }
 function drawItem(g) {
@@ -1949,7 +2000,7 @@ function drawItem(g) {
   if (g.it.r >= 2) { ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = col; ctx.fillRect(g.x - 6, g.y - 220, 12, 220); ctx.restore(); }
   ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(run.t * 6); ctx.fillStyle = col;
   ctx.beginPath(); ctx.ellipse(g.x, g.y, 34, 13, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  { const im = IMG['ui/' + itemImg(g.it)]; if (im) { const h = 46, w = im.width * h / im.height; ctx.drawImage(im, g.x - w / 2, g.y - 12 + bob - h * 0.7, w, h); } else { ctx.font = '34px Galmuri11, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(g.it.ic, g.x, g.y - 12 + bob); } }
+  { const im = IMG['ui/' + itemImg(g.it)]; if (im) { const h = 46, w = im.width * h / im.height; ctx.drawImage(im, g.x - w / 2, g.y - 12 + bob - h * 0.7, w, h); } else { ctx.font = '34px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(g.it.ic, g.x, g.y - 12 + bob); } }
 }
 
 // 지금 상태에 맞는 동작과 그 동작이 시작된 뒤 지난 시간(null이면 바뀐 때부터 셈)
@@ -2046,7 +2097,7 @@ function drawEnemy(e) {
     const w = e.kind === 'boss' ? 150 : 90, top = e.y - e.h * e.s - 18 - (e.z || 0);
     ctx.fillStyle = '#000'; ctx.fillRect(e.x - w / 2 - 2, top - 2, w + 4, 11);
     ctx.fillStyle = '#e53935'; ctx.fillRect(e.x - w / 2, top, w * Math.max(0, e.hp / e.maxHp), 7);
-    ctx.font = 'bold 20px Galmuri11, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = e.kind === 'boss' ? '#ff8a80' : '#ffd54f';
+    ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = e.kind === 'boss' ? '#ff8a80' : '#ffd54f';
     ctx.strokeText(e.name, e.x, top - 10); ctx.fillText(e.name, e.x, top - 10);
   }
 }
@@ -2129,7 +2180,7 @@ function render() {
   }
   ctx.textAlign = 'center';
   for (const n of nums) upright(n.x, n.y, 60, () => {
-    ctx.font = n.crit ? 'bold 32px Galmuri11, sans-serif' : 'bold 24px Galmuri11, sans-serif';
+    ctx.font = n.crit ? 'bold 32px sans-serif' : 'bold 24px sans-serif';
     ctx.globalAlpha = Math.min(1, n.t * 2); ctx.lineWidth = 5; ctx.strokeStyle = '#000'; ctx.fillStyle = n.heal ? '#7CFC9A' : n.crit ? '#ff8a3d' : '#ffe14d';
     const t = n.crit ? n.v + '!' : n.v; ctx.strokeText(t, n.x, n.y); ctx.fillText(t, n.x, n.y);
   });
@@ -2187,15 +2238,15 @@ function drawScreenFx() {
     if (f.type === 'bigtext') {
       const p = 1 - f.t / 1.1, s = p < 0.15 ? 0.6 + p / 0.15 * 0.5 : 1.1;
       ctx.save(); ctx.globalAlpha = Math.min(1, f.t * 3); ctx.translate(W / 2, H * 0.38); ctx.scale(s, s); ctx.rotate(-0.06);
-      ctx.font = `900 ${40 * u}px Galmuri11, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 10 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = '#ffd54f';
+      ctx.font = `900 ${40 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 10 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = '#ffd54f';
       ctx.strokeText(f.text, 0, 0); ctx.fillText(f.text, 0, 0); ctx.restore();
     }
     if (f.type === 'itemtext') { // 장비 장착 알림
       const it = f.it, y = H * 0.62, a = Math.min(1, f.t * 2);
       ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center';
-      ctx.font = `bold ${17 * u}px Galmuri11, sans-serif`; ctx.lineWidth = 5 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = RAR[it.r].c;
+      ctx.font = `bold ${17 * u}px sans-serif`; ctx.lineWidth = 5 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = RAR[it.r].c;
       const t1 = `${RAR[it.r].n} ${it.name} ${f.msg || '장착!'}`; ctx.strokeText(t1, W / 2, y); ctx.fillText(t1, W / 2, y);
-      ctx.font = `bold ${13 * u}px Galmuri11, sans-serif`; ctx.fillStyle = '#9be29b'; const t2 = statText(it);
+      ctx.font = `bold ${13 * u}px sans-serif`; ctx.fillStyle = '#9be29b'; const t2 = statText(it);
       ctx.strokeText(t2, W / 2, y + 22 * u); ctx.fillText(t2, W / 2, y + 22 * u); ctx.restore();
     }
   }
@@ -2210,21 +2261,21 @@ function drawHUD() {
   const bw = 140 * u, by = 16 * u;
   ctx.fillStyle = '#000b'; ctx.fillRect(pad, by, bw + 4 * u, 18 * u);
   ctx.fillStyle = '#e53935'; ctx.fillRect(pad + 2 * u, by + 2 * u, bw * Math.max(0, P.hp / P.maxHp), 14 * u);
-  ctx.font = `bold ${11 * u}px Galmuri11, sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
+  ctx.font = `bold ${11 * u}px sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
   ctx.fillText(`Lv ${P.lv}  ·  ❤ ${Math.max(0, Math.ceil(P.hp))}/${P.maxHp}`, pad + 6 * u, by + 13 * u);
-  ctx.font = `${13 * u}px Galmuri11, sans-serif`;
+  ctx.font = `${13 * u}px sans-serif`;
   let x = pad, row = 0;
   for (const k in P.w) if (P.w[k]) { const im = IMG['ui/' + k], yy = by + 62 * u + row * 21 * u; if (im) { ctx.imageSmoothingEnabled = false; ctx.drawImage(im, x, yy - 15 * u, 18 * u, 18 * u); ctx.fillText(P.w[k], x + 19 * u, yy); } else ctx.fillText(UPG[k].ic + P.w[k], x, yy); x += 34 * u; if (x > pad + 170 * u) { x = pad; row++; } }
-  ctx.font = `bold ${14 * u}px Galmuri11, sans-serif`; ctx.fillStyle = '#ffd54f';
+  ctx.font = `bold ${14 * u}px sans-serif`; ctx.fillStyle = '#ffd54f';
   { const yy = by + 37 * u, im = IMG['ui/coin']; if (im) { ctx.drawImage(im, pad, yy - 14 * u, 17 * u, 17 * u); ctx.fillText(run.gold, pad + 21 * u, yy); } else ctx.fillText(`🪙 ${run.gold}`, pad, yy); }
   const m = Math.floor(run.ft / 60), s = String(Math.floor(run.ft % 60)).padStart(2, '0');
-  ctx.textAlign = 'center'; ctx.font = `bold ${17 * u}px Galmuri11, sans-serif`; ctx.lineWidth = 4 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center'; ctx.font = `bold ${17 * u}px sans-serif`; ctx.lineWidth = 4 * u; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
   ctx.strokeText(`${run.floor}층  ${m}:${s}`, W / 2, 32 * u); ctx.fillText(`${run.floor}층  ${m}:${s}`, W / 2, 32 * u);
-  { const mt = missionText(); ctx.font = `bold ${12 * u}px Galmuri11, sans-serif`; ctx.lineWidth = 3 * u; ctx.strokeText(mt, W / 2, 50 * u); ctx.fillStyle = '#bfffe9'; ctx.fillText(mt, W / 2, 50 * u); }
+  { const mt = missionText(); ctx.font = `bold ${12 * u}px sans-serif`; ctx.lineWidth = 3 * u; ctx.strokeText(mt, W / 2, 50 * u); ctx.fillStyle = '#bfffe9'; ctx.fillText(mt, W / 2, 50 * u); }
   drawMinimap(u);
   drawStairsHint(u);
   if (toastT > 0) {
-    ctx.globalAlpha = Math.min(1, toastT * 1.5); ctx.textAlign = 'center'; ctx.font = `bold ${16 * u}px Galmuri11, sans-serif`;
+    ctx.globalAlpha = Math.min(1, toastT * 1.5); ctx.textAlign = 'center'; ctx.font = `bold ${16 * u}px sans-serif`;
     ctx.strokeText(toastMsg, W / 2, H * 0.22); ctx.fillStyle = '#ffd54f'; ctx.fillText(toastMsg, W / 2, H * 0.22); ctx.globalAlpha = 1;
   }
   if (stick.on && state === 'play') {
@@ -2261,6 +2312,7 @@ function drawMinimap(u) {
   const dot = (x, y, c, r) => { const X = x / TS * 3, Y = y / TS * 3; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(ox + (X - Y) * s3, my + (X + Y) * 0.5 * s3, r, 0, Math.PI * 2); ctx.fill(); };
   if (explored[idx((stairs.x / TS) | 0, (stairs.y / TS) | 0)]) dot(stairs.x, stairs.y, stairs.locked ? '#ff5252' : '#fff59d', 4 * u);
   for (const c of chests) if (!c.open && explored[idx((c.x / TS) | 0, (c.y / TS) | 0)]) dot(c.x, c.y, '#ffd54f', 3 * u);
+  for (const c of run.camps || []) if (explored[idx((c.x / TS) | 0, (c.y / TS) | 0)] && enemies.some(e => e.camp === c && e.state !== 'chase')) dot(c.x, c.y, '#ff5a5a', 3.5 * u);
   for (const c of cages) if (c.st !== 'free' && explored[idx((c.x / TS) | 0, (c.y / TS) | 0)]) dot(c.x, c.y, '#7CFC9A', 3.5 * u);
   dot(P.x, P.y, '#ff6b4a', 3.5 * u);
 }
