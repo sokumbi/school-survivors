@@ -444,13 +444,42 @@ const MOBS = {
   chair:  { name: '의자',   h: 90, hp: 32, sp: [55, 66],  dmg: 12, r: 22, xp: 2, from: 1, t1: 110, w: 2 },   // 부르르 떨다 돌진
   eraser: { name: '지우개', h: 70, hp: 70, sp: [40, 50],  dmg: 10, r: 26, xp: 3, from: 2, w: 2 },   // 튼튼, 쓰러지면 둘로 쪼개져요
   clock:  { name: '시계',   h: 82, hp: 28, sp: [58, 70],  dmg: 9,  r: 22, xp: 2, from: 2, w: 2 },   // 째깍 순간이동
+  pencil:  { name: '연필',   h: 92, hp: 18, sp: [62, 78],  dmg: 11, r: 18, xp: 2, from: 1, t1: 150, w: 2 },   // 줄 긋고 쿡 찌르며 돌진
+  textbook:{ name: '교과서', h: 80, hp: 22, sp: [70, 86],  dmg: 7,  r: 22, xp: 2, from: 1, t1: 190, w: 2 },   // 날아다니며 종이 세 장
+  globe:   { name: '지구본', h: 96, hp: 45, sp: [50, 60],  dmg: 12, r: 26, xp: 2, from: 2, w: 2 },   // 데굴데굴 굴러 벽에 튕겨요
+  tray:    { name: '급식판', h: 74, hp: 30, sp: [60, 74],  dmg: 9,  r: 22, xp: 2, from: 2, w: 2 },   // 급식판을 던지면 되돌아와요
+  bell:    { name: '종',     h: 84, hp: 40, sp: [40, 50],  dmg: 6,  r: 22, xp: 3, from: 2, w: 1 },   // 땡땡! 주변 괴물이 빨라져요
+  mop:     { name: '대걸레', h: 110, hp: 50, sp: [55, 66], dmg: 8,  r: 22, xp: 3, from: 3, w: 2 },   // 미끄러운 물자국을 남겨요
 };
 // 중간 보스: 공격 전에 바닥에 공격 범위가 빨갛게 보여요
 const ELITES = {
   podium:  { name: '교탁 거인', h: 140, hp: 300, sp: 70, dmg: 16, r: 40 },   // 펄쩍 뛰어 쿵! (동그라미)
   speaker: { name: '왕스피커',  h: 165, hp: 260, sp: 55, dmg: 14, r: 42 },   // 고함 (부채꼴)
+  locker:  { name: '사물함 괴물', h: 170, hp: 340, sp: 60, dmg: 17, r: 44 },   // 줄 따라 돌진 → 덥석 (끝에 동그라미)
+  piano:   { name: '피아노 유령', h: 150, hp: 280, sp: 50, dmg: 13, r: 48 },   // 음표 탄막 / 건반 줄 세 개
+  vending: { name: '성난 자판기', h: 175, hp: 320, sp: 45, dmg: 15, r: 42 },   // 캔 세 발 / 캔 폭탄 세 군데
 };
-const MON_IMGS = [...Object.keys(MOBS), ...Object.keys(ELITES), 'captain'];
+const MON_IMGS = [...Object.keys(MOBS), ...Object.keys(ELITES), 'captain', 'mother'];
+// 구역마다 어울리는 괴물: 방 이름 → 일반 괴물들, 중간 보스. 층 제한(from)은 지켜요. 4번 중 3번은 그 방 괴물
+const ZONE = {
+  '과학실':  { mob: ['globe', 'clock', 'chalk'], elite: 'podium' },
+  '음악실':  { mob: ['bell', 'paper'], elite: 'piano' },
+  '미술실':  { mob: ['pencil', 'eraser', 'paper'], elite: 'podium' },
+  '도서실':  { mob: ['textbook', 'paper', 'pencil'], elite: 'locker' },
+  '컴퓨터실': { mob: ['clock', 'chair', 'milk'], elite: 'vending' },
+  '방송실':  { mob: ['bell', 'clock', 'paper'], elite: 'speaker' },
+  '창고':    { mob: ['chair', 'mop', 'eraser'], elite: 'locker' },
+  '교무실':  { mob: ['paper', 'chalk', 'pencil'], elite: 'podium' },
+  '급식실':  { mob: ['milk', 'tray'], elite: 'vending' },
+  '보건실':  { mob: ['milk', 'mop', 'paper'], elite: 'speaker' },
+  '복도':    { mob: ['paper', 'chair', 'globe', 'mop'], elite: null },
+};
+function zoneOf(x, y) { if (!roomOf) return null; const k = roomOf[idx(clamp((x / TS) | 0, 0, GW - 1), clamp((y / TS) | 0, 0, GH - 1))]; return k >= 0 ? ZONE[rooms[k].name] : ZONE['복도']; }
+function zoneMob(x, y) {
+  const Z = zoneOf(x, y); if (!Z || Math.random() < 0.25) return pickMob();
+  const ok = Z.mob.filter(k => MOBS[k] && MOBS[k].from <= run.floor); return ok.length ? pick(ok) : pickMob();
+}
+function zoneElite(x, y) { const Z = zoneOf(x, y); return Z && Z.elite && Math.random() < 0.8 ? Z.elite : pick(Object.keys(ELITES)); }
 function pickMob() {
   // 1층에선 시간이 지나야 새 괴물이 섞여요 (t1초)
   const ks = Object.keys(MOBS).filter(k => MOBS[k].from <= run.floor && (run.floor > 1 || run.ft >= (MOBS[k].t1 || 0))), tot = ks.reduce((a, k) => a + MOBS[k].w, 0);
@@ -467,7 +496,7 @@ const YD = { idle: [4, 4, 1], walk: [8, 10, 1], run: [8, 12, 1], dash: [4, 14, 0
 const HR = { run: [4, 9, 1], walk: [4, 7, 1], idle: [2, 2, 1], punch: [2, 10, 0] };
 const K_YD = HERO_H / 132;
 // 시험판(2026-11-20): 유담을 미드저니 자세 4장(img/ydm) + 코드 움직임으로 그려요. false면 예전 그림
-const ASSET_V = 20261122;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
+const ASSET_V = 20261123;   // 그림을 바꾸면 숫자를 올려요 (폰이 예전 그림을 붙잡지 않게)
 const MJ_HERO = false, YDM = ['idle', 'run', 'punch', 'hurt'];
 async function loadAll() {
   SPR = await fetch('img/sprites.json').then(r => r.json());
@@ -811,14 +840,14 @@ const isEvo = k => P.w[k] >= UPG[k].max && EVO[k];
 // ════════════════ 상태 ════════════════
 let state = 'title', last = 0;
 let warns = [], eshots = [], beams = [];
-let P, B, enemies, gems, coins, items, shots, puddles, fx, nums, ghosts, run;
+let P, B, enemies, gems, coins, items, shots, puddles, fx, nums, ghosts, run, slicks = [];
 let cages = [];
 let grid, roomOf, rooms, walkTiles, explored, chests, stairs, flow, flowT = 0, mini, miniDirty;
 
 function newRun() {
   B = baseStats();
   P = { x: 0, y: 0, face: 1, hp: B.maxHp, maxHp: B.maxHp, speed: B.speed, bonusHp: 0, speedMul: 1,
-        lv: 1, xp: 0, need: 6, inv: 0, hurtT: 0, atkT: 0, walkT: 0, moving: false, joyT: 0, deadT: 0, won: false,
+        lv: 1, xp: 0, need: 14, inv: 0, hurtT: 0, atkT: 0, walkT: 0, moving: false, joyT: 0, deadT: 0, won: false,
         dashT: 0, dashCd: 0, dvx: 0, dvy: 0, ult: 0, ultT: 0, pts: 0, cls: null, career: null, books: [],
         w: Object.fromEntries(Object.keys(UPG).map(k => [k, 0])), cd: {}, planeAng: 0 };
   P.w.punch = 1;
@@ -843,7 +872,7 @@ const walk = (x, y) => x >= 0 && y >= 0 && x < GW && y < GH && (grid[idx(x, y)] 
 function buildFloor(n) {
   for (let attempt = 0; attempt < 30; attempt++) if (tryBuild(n)) break;
   run.floor = n; run.ft = 0; run.clue = false; run.boss = null; run.bossDead = false; run.spawnAcc = 0;
-  enemies = []; gems = []; shots = []; coins = []; items = []; puddles = []; warns = []; eshots = []; beams = []; parts = []; run.shopNear = false;
+  enemies = []; gems = []; shots = []; coins = []; items = []; puddles = []; warns = []; eshots = []; beams = []; parts = []; slicks = []; run.shopNear = false;
   explored = new Uint8Array(GW * GH);
   for (const c of cages) {
     const pool = FRIENDS.filter(f => !hasF(f.id) && !run.met.includes(f.id));
@@ -1057,10 +1086,10 @@ function spawnAt(kind, x, y, type) {
   base.aiT = 1 + Math.random() * 2; base.wind = 0;
   if (kind === 'boss') e = { ...base, kind, type: 'captain', name: '네모단 함장', s: 1, h: 230, hp: 5200, maxHp: 5200, sp: 70, dmg: 24, r: 50, xp: 40, gold: 60, aiT: 2.5, pat: 0 };
   else if (kind === 'elite') {
-    const ty = type || pick(Object.keys(ELITES)), T = ELITES[ty];   // 지킴이는 금빛으로 보여요
+    const ty = type || zoneElite(x, y), T = ELITES[ty];   // 지킴이는 금빛으로 보여요
     e = { ...base, kind, type: ty, name: T.name, s: 1, h: T.h, hp: T.hp * m * HP_ELITE, maxHp: T.hp * m * HP_ELITE, sp: T.sp, dmg: T.dmg + run.floor * 3, r: T.r, xp: 10, gold: 8 };
   } else {
-    const ty = type || pickMob(), T = MOBS[ty];
+    const ty = type || zoneMob(x, y), T = MOBS[ty];
     e = { ...base, kind: 'mob', type: ty, s: 1, h: T.h, hp: T.hp * m * HP_MOB, maxHp: T.hp * m * HP_MOB, sp: rand(...T.sp) * (0.8 + 0.2 * ease) + run.floor * 6, dmg: (T.dmg + run.floor * 3) * (0.3 + 0.7 * ease), r: T.r, xp: T.xp, gold: Math.random() < 0.2 ? 1 + (Math.random() < 0.25 ? 1 : 0) : 0 };   // 매점에서 쓸 돈
   }
   enemies.push(e); return e;
@@ -1238,7 +1267,7 @@ function killEnemy(e) {
     const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 180;
     fx.push({ type: 'scrap', lift: 30, x: e.x, y: e.y - 30, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 120, t: 0.5 + Math.random() * 0.3, rot: Math.random() * 6 });
   }
-  if (e.kind === 'boss') { run.bossDead = true; stairs.locked = false; P.joyT = 1.2; toast('함장을 물리쳤어요! 옥상 문이 열렸어요'); }
+  if (e.kind === 'boss') { run.bossDead = true; stairs.locked = false; P.joyT = 1.2; toast('큐브 마더를 물리쳤어요! 옥상 문이 열렸어요'); }
 }
 
 // ════════════════ 괴물 공격 ════════════════
@@ -1276,7 +1305,70 @@ function enemyAI(e, dt) {
     if (e.wind <= 0) { e.relT = 0.2; e.z = 0; e.leap = null; if (e.onWind) { const f = e.onWind; e.onWind = null; f(); } }
     return 0;
   }
+  if (e.hasteT > 0) { e.hasteT -= dt; if (Math.random() < 0.15) trail(e.x, e.y, e.h * 0.5, '#ffe066', 5, 0.3); if (e.hasteT <= 0) e.sp /= 1.5; }
+  if (e.roll) {   // 지구본: 데굴데굴, 벽에 닿으면 튕겨요
+    e.roll.t -= dt; const nx = e.x + e.roll.vx * dt, ny = e.y + e.roll.vy * dt;
+    if (solidAt(nx, e.y)) e.roll.vx *= -1; else e.x = nx;
+    if (solidAt(e.x, ny)) e.roll.vy *= -1; else e.y = ny;
+    if (e.roll.t <= 0) e.roll = null; return 0;
+  }
   switch (e.type) {
+    case 'pencil':   // 앞으로 줄을 긋고 쿡! 돌진
+      if (e.aiT <= 0 && d < 380) { e.aiT = 2.8; e.wind = 0.55;
+        const w = warn(e, { shape: 'line', x: e.x, y: e.y, ang, len: 380, w: 44, dur: 0.55, small: true }, () => {});
+        e.onWind = () => { e.dash = { vx: Math.cos(w.ang) * 860, vy: Math.sin(w.ang) * 860, t: 0.42 }; }; }
+      return 1;
+    case 'textbook': // 날아다니며 종이 세 장
+      if (e.aiT <= 0 && d < 560) { e.aiT = run.floor === 1 ? 3.2 : 2.4; e.wind = 0.4; e.onWind = () => { for (const da of [-0.25, 0, 0.25]) eshoot(e.x, e.y, Math.atan2(P.y - e.y, P.x - e.x) + da, 300, e.dmg * 0.7, 'page'); }; }
+      e.wob = (e.wob || Math.random() * 6) + dt * 3; e.x += Math.cos(e.wob) * 40 * dt; e.y += Math.sin(e.wob * 1.3) * 40 * dt;
+      return d < 260 ? -0.6 : d < 360 ? 0.2 : 1;
+    case 'globe':
+      if (e.aiT <= 0 && d < 520) { e.aiT = 3.6; e.wind = 0.5; e.onWind = () => { const a = Math.atan2(P.y - e.y, P.x - e.x); e.roll = { vx: Math.cos(a) * 420, vy: Math.sin(a) * 420, t: 2.2 }; }; }
+      return 0.8;
+    case 'tray':     // 급식판 던지기: 날아갔다 돌아와요
+      if (e.aiT <= 0 && d < 520) { e.aiT = 3; e.wind = 0.45; e.onWind = () => { eshots.push({ x: e.x, y: e.y, vx: Math.cos(ang) * 420, vy: Math.sin(ang) * 420, t: 3.2, dmg: e.dmg, kind: 'tray', rot: 0 }); }; }
+      return d < 240 ? -0.5 : 1;
+    case 'bell':     // 땡땡! 둘레 괴물이 빨라지고 가까우면 귀가 아파요
+      if (e.aiT <= 0 && d < 600) { e.aiT = 4.5; e.wind = 0.6; e.onWind = () => {
+        for (let i = 0; i < 2; i++) fx.push({ type: 'ring', x: e.x, y: e.y - 40, lift: 40, r: 20 + i * 40, R: 280 + i * 40, dur: 0.45, t: 0.45, col: '#ffd54f', w: 8 });
+        for (const o of enemies) if (o !== e && !(o.hasteT > 0) && Math.hypot(o.x - e.x, o.y - e.y) < 300) { o.sp *= 1.5; o.hasteT = 3.5; }
+        if (Math.hypot(P.x - e.x, P.y - e.y) < 180) hurtP(e.dmg); SND.wave(); }; }
+      return d < 300 ? -0.4 : 0.7;
+    case 'mop':      // 지나간 자리에 미끄러운 물자국
+      e.slickT = (e.slickT || 0) - dt; if (e.slickT <= 0) { e.slickT = 0.7; slicks.push({ x: e.x, y: e.y, r: 52, t: 6 }); }
+      return 1;
+    case 'locker':   // 줄 따라 돌진하고, 끝에서 덥석!
+      if (e.aiT <= 0 && d < 520) { e.aiT = 3.6; e.wind = 0.9;
+        const w = warn(e, { shape: 'line', x: e.x, y: e.y, ang, len: 520, w: 110, dur: 0.9 }, () => {});
+        const ex = e.x + Math.cos(ang) * 470, ey = e.y + Math.sin(ang) * 470;
+        e.onWind = () => { e.dash = { vx: Math.cos(w.ang) * 1100, vy: Math.sin(w.ang) * 1100, t: 0.43 }; if (inLine(w, P.x, P.y)) hurtP(e.dmg, Math.cos(w.ang) * 90, Math.sin(w.ang) * 90);
+          const c = warn(e, { shape: 'circle', x: ex, y: ey, r: 130, dur: 0.55 }, () => {}); setTimeout(() => { if (e.hp <= 0) return; boom(c.x, c.y, 150, '#4dd0c8'); if (inCircle(c, P.x, P.y)) hurtP(e.dmg + 4); }, 560); }; }
+      return 1;
+    case 'piano':    // 음표 탄막 / 건반 줄 세 개
+      if (e.aiT <= 0 && d < 560) { const pat = (e.pat = (e.pat || 0) + 1) % 2;
+        if (pat) { e.aiT = 3.2; e.wind = 0.7; e.onWind = () => { for (let i = 0; i < 16; i++) eshoot(e.x, e.y, i / 16 * Math.PI * 2 + run.t, 230, e.dmg * 0.6, 'note'); SND.wave(); }; }
+        else { e.aiT = 3.4; e.wind = 0.9; const ws = [-1, 0, 1].map(k => warn(e, { shape: 'line', x: e.x + Math.cos(ang + Math.PI / 2) * k * 120, y: e.y + Math.sin(ang + Math.PI / 2) * k * 120, ang, len: 700, w: 60, dur: 0.9 }, () => {}));
+          e.onWind = () => { for (const w of ws) { beams.push({ x: w.x, y: w.y, ang: w.ang, len: w.len, w: w.w, t: 0.3 }); if (inLine(w, P.x, P.y)) hurtP(e.dmg); } shake = 8; }; } }
+      return d < 280 ? -0.5 : 0.8;
+    case 'vending':  // 캔 세 발 / 캔 폭탄 세 군데
+      if (e.aiT <= 0 && d < 600) { const pat = (e.pat = (e.pat || 0) + 1) % 2;
+        if (pat) { e.aiT = 3; e.wind = 0.6; e.onWind = () => { for (let i = 0; i < 3; i++) setTimeout(() => { if (e.hp > 0) eshoot(e.x, e.y, Math.atan2(P.y - e.y, P.x - e.x), 440, e.dmg * 0.7, 'can'); }, i * 160); }; }
+        else { e.aiT = 3.6; e.wind = 1.0; const ws = [0, 1, 2].map(() => warn(e, { shape: 'circle', x: P.x + rand(-150, 150), y: P.y + rand(-150, 150), r: 100, dur: 1.0 }, () => {}));
+          e.onWind = () => { for (const w of ws) { boom(w.x, w.y, 120, '#ff7043'); if (inCircle(w, P.x, P.y)) hurtP(e.dmg); } }; } }
+      return d < 300 ? -0.3 : 0.8;
+    case 'mother':   // 큐브 마더: 십자 레이저(돌아가요) → 큐브 비 → 부하+탄막
+      if (e.aiT <= 0) { const pat = e.pat++ % 3;
+        if (pat === 0) { e.aiT = 3.2; e.wind = 1.1; const a0 = Math.random() * Math.PI;
+          const ws = [0, 1, 2, 3].map(i => warn(e, { shape: 'line', x: e.x, y: e.y, ang: a0 + i * Math.PI / 2, len: 1200, w: 80, dur: 1.1 }, () => {}));
+          e.onWind = () => { for (const w of ws) { beams.push({ x: w.x, y: w.y, ang: w.ang, len: w.len, w: w.w, t: 0.4 }); if (inLine(w, P.x, P.y)) hurtP(e.dmg + 6); } shake = 14; fx.push({ type: 'flash', t: 0.12 });
+            const ws2 = ws.map(w => warn(e, { shape: 'line', x: e.x, y: e.y, ang: w.ang + Math.PI / 4, len: 1200, w: 80, dur: 0.8 }, () => {}));
+            setTimeout(() => { if (e.hp <= 0) return; for (const w of ws2) { beams.push({ x: w.x, y: w.y, ang: w.ang, len: w.len, w: w.w, t: 0.4 }); if (inLine(w, P.x, P.y)) hurtP(e.dmg + 6); } shake = 14; }, 820); }; }
+        else if (pat === 1) { e.aiT = 3; e.wind = 1.1;
+          const ws = Array.from({ length: 9 }, (_, i) => warn(e, { shape: 'circle', x: P.x + (i % 3 - 1) * 170 + rand(-30, 30), y: P.y + (Math.floor(i / 3) - 1) * 170 + rand(-30, 30), r: 90, dur: 1.1 + (i % 3) * 0.15 }, () => {}));
+          e.onWind = () => ws.forEach((w, i) => setTimeout(() => { if (e.hp <= 0) return; boom(w.x, w.y, 100, '#b388ff'); if (inCircle(w, P.x, P.y)) hurtP(e.dmg); }, (i % 3) * 150)); }
+        else { e.aiT = 3.6; e.wind = 0.7; e.onWind = () => { for (let i = 0; i < 20; i++) eshoot(e.x, e.y, i / 20 * Math.PI * 2, 260, e.dmg * 0.6, 'cube');
+            for (let i = 0; i < 2; i++) { const a = Math.random() * 6.28, x = e.x + Math.cos(a) * 180, y = e.y + Math.sin(a) * 180; if (!solidAt(x, y)) spawnAt('elite', x, y); } }; } }
+      return 0.6;
     case 'chalk':
       if (e.aiT <= 0 && d < 520) { e.aiT = run.floor === 1 ? 3 : 2.2; e.wind = 0.45; e.onWind = () => { eshoot(e.x, e.y, Math.atan2(P.y - e.y, P.x - e.x), 330, e.dmg * 0.7, 'chalk'); SND.hit(); }; }
       return d < 220 ? -0.7 : d < 330 ? 0 : 1;
@@ -1313,7 +1405,8 @@ function enemyAI(e, dt) {
           shake = 10; if (inCone(w, P.x, P.y)) hurtP(e.dmg + 6, Math.cos(w.ang) * 140, Math.sin(w.ang) * 140); };
       }
       return 1;
-    case 'captain':  // 함장: 큐브 비 → 레이저 → 부하 부르기+탄막
+    case 'captain':  // 함장: 큐브 비 → 레이저 → 부하 부르기+탄막. 체력이 반이 되면 큐브 마더로 변신
+      if (e.hp < e.maxHp * 0.5 && !e.phase2) { e.phase2 = true; motherTransform(e); return 0; }
       if (e.aiT <= 0) {
         const pat = e.pat++ % 3;
         if (pat === 0) {
@@ -1342,12 +1435,14 @@ function updateEnemyAttacks(dt) {
   warns = warns.filter(w => !w.done && w.owner.hp > 0);
   for (const b of eshots) {
     b.t -= dt; b.x += b.vx * dt; b.y += b.vy * dt; b.rot += dt * 12;
+    if (b.kind === 'tray' && !b.back && b.t < 2.2) { b.back = true; b.vx = -b.vx * 0.9; b.vy = -b.vy * 0.9; }
     if (solidAt(b.x, b.y)) b.t = 0;
     else if (Math.hypot(b.x - P.x, b.y - P.y) < 30) { if (hurtP(b.dmg)) b.t = 0; }
   }
   eshots = eshots.filter(b => b.t > 0);
   for (const b of beams) b.t -= dt;
   beams = beams.filter(b => b.t > 0);
+  for (const q of slicks) q.t -= dt; slicks = slicks.filter(q => q.t > 0);
 }
 // 바닥에 그리는 공격 범위 (마름모 변환 안: 세계 좌표 그대로)
 function drawWarns() {
@@ -1371,11 +1466,31 @@ function drawWarns() {
   }
 }
 function drawEshot(b) {
+  if (b.kind === 'page' || b.kind === 'note' || b.kind === 'can' || b.kind === 'tray') {   // 새 괴물 탄: 그림 없이 그려요
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot); ctx.lineWidth = 2.5; ctx.strokeStyle = '#2a2436';
+    if (b.kind === 'page') { ctx.fillStyle = '#fffbe8'; ctx.fillRect(-10, -13, 20, 26); ctx.strokeRect(-10, -13, 20, 26); ctx.fillStyle = '#9aa'; for (let i = -7; i < 10; i += 5) ctx.fillRect(-6, i, 12, 1.5); }
+    else if (b.kind === 'note') { ctx.rotate(-b.rot); ctx.fillStyle = '#c9a2ff'; ctx.beginPath(); ctx.ellipse(-4, 6, 8, 6, -0.4, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(3, -14, 3, 20); ctx.strokeRect(3, -14, 3, 20); }
+    else if (b.kind === 'can') { ctx.fillStyle = '#e53935'; ctx.fillRect(-8, -12, 16, 24); ctx.strokeRect(-8, -12, 16, 24); ctx.fillStyle = '#fff'; ctx.fillRect(-8, -3, 16, 5); }
+    else { ctx.fillStyle = '#cfd8dc'; ctx.fillRect(-18, -11, 36, 22); ctx.strokeRect(-18, -11, 36, 22); ctx.fillStyle = '#90a4ae'; ctx.fillRect(-14, -7, 12, 14); ctx.fillRect(2, -7, 12, 6); ctx.fillRect(2, 1, 12, 6); }
+    ctx.restore(); return;
+  }
   if (drawPic(b.kind === 'chalk' ? 'p_chalk' : 'p_cube', b.x, b.y, b.kind === 'chalk' ? 30 : 24, b.rot)) return;
   ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot);
   if (b.kind === 'chalk') { ctx.fillStyle = '#fafafa'; ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.fillRect(-11, -4, 22, 8); ctx.strokeRect(-11, -4, 22, 8); }
   else { ctx.fillStyle = '#80deea'; ctx.strokeStyle = '#006064'; ctx.lineWidth = 3; ctx.fillRect(-9, -9, 18, 18); ctx.strokeRect(-9, -9, 18, 18); }
   ctx.restore();
+}
+
+function motherTransform(e) {
+  warns = warns.filter(w => w.owner !== e); e.wind = 0; e.onWind = null; e.aiT = 2.5; e.pat = 0;
+  e.type = 'mother'; e.name = '큐브 마더'; e.h = 290; e.r = 70; e.hp = e.maxHp * 0.7; e.dmg += 6;
+  fx.push({ type: 'flash', t: 0.4 }); fx.push({ type: 'bigtext', text: '👁 큐브 마더 등장!', t: 2 }); shake = 22; hitStop(0.5);
+  for (let i = 0; i < 4; i++) fx.push({ type: 'ring', x: e.x, y: e.y - 60, lift: 60, r: 30 + i * 50, R: 400 + i * 90, dur: 0.7, t: 0.7 + i * 0.1, col: '#b388ff', w: 14 });
+  sparkle(e.x, e.y, 100, 80, '#c9a2ff', 500, 1.2, 10, 420);
+  setTimeout(() => { if (state === 'play') talk([
+    { w: 'alien', t: alienSpeak() + ' ' + alienSpeak(), name: '큐브 마더 (외계어)', img: 'img/mon/mother.png', col: '#9b5cff' },
+    { w: 'radio', t: '치직… 함장 안에 큐브 마더가 들어 있었어! 레이저가 돌아가니까 대각선 틈으로 피해!' },
+    { w: 'me', t: '변신까지 하냐고!! 좋아, 끝까지 간다!', f: 'ready' }]); }, 700);
 }
 
 // ════════════════ 대시 · 필살기 ════════════════
@@ -1627,7 +1742,7 @@ function makeRecs() {
 function levelUp() {
   if (P.xp >= P.need) fx.push({ type: 'pic', pic: 'fx_lvup', x: P.x, y: P.y - 150, lift: 0, t: 0.9, dur: 0.9, s: 70 });
   let n = 0;
-  while (P.xp >= P.need) { P.lv++; P.xp -= P.need; P.need = Math.round(P.need * 1.28 + 3); P.pts++; n++; }
+  while (P.xp >= P.need) { P.lv++; P.xp -= P.need; P.need = Math.round(P.need * 1.32 + 6);   /* 레벨이 오를수록 훨씬 많이 필요해요 (예전보다 약 2.8배 느리게) */ P.pts++; n++; }
   if (!n) return;
   SND.lvup();
   fx.push({ type: 'lvbeam', x: P.x, y: P.y, lift: 0, t: 1.1, dur: 1.1 }); fx.push({ type: 'bigtext', text: `⬆ LEVEL UP! Lv ${P.lv}`, t: 1.3 });
@@ -1994,7 +2109,8 @@ function update(dt) {
     if (Math.random() < 0.7) ghosts.push({ x: P.x, y: P.y, key: heroKey(), face: P.face, t: 0.22 });
   } else {
     P.moving = Math.hypot(dx, dy) > 0.05;
-    P.x += dx * P.speed * dt; P.y += dy * P.speed * dt;
+    const slick = slicks.some(q => Math.hypot(P.x - q.x, P.y - q.y) < q.r) ? 0.55 : 1;   // 대걸레 물자국: 미끌미끌 느려져요
+    P.x += dx * P.speed * slick * dt; P.y += dy * P.speed * slick * dt;
     if (dx - dy > 0.1) P.face = 1; else if (dx - dy < -0.1) P.face = -1;
   }
   collide(P, 20);
@@ -2763,7 +2879,8 @@ function drawHeroHp() {
   ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x, y, w * r, 3);
 }
 // 괴물 걸음새: flap 펄럭 · waddle 뒤뚱 · jitter 종종 · rock 덜컹 · jelly 말랑 통통 · tick 째깍 · stomp 쿵쿵 · thump 둥둥 · hover 둥실
-const ACT = { paper: 'flap', chalk: 'waddle', milk: 'jitter', chair: 'rock', eraser: 'jelly', clock: 'tick', podium: 'stomp', speaker: 'thump', captain: 'hover' };
+const ACT = { paper: 'flap', chalk: 'waddle', milk: 'jitter', chair: 'rock', eraser: 'jelly', clock: 'tick', podium: 'stomp', speaker: 'thump', captain: 'hover',
+  pencil: 'waddle', textbook: 'flap', globe: 'rock', tray: 'jitter', bell: 'tick', mop: 'waddle', locker: 'stomp', piano: 'thump', vending: 'stomp', mother: 'hover' };
 const easeBack = t => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
 function drawEnemy(e) {
   const z = e.z || 0;
@@ -2835,6 +2952,8 @@ function render() {
   drawFloor(v);
   ctx.save(); ctx.transform(1, 0.5, -1, 0.5, 0, 0);
   drawCubeFloor(v);
+  for (const q of slicks) { ctx.save(); ctx.globalAlpha = Math.min(0.45, q.t * 0.3); ctx.fillStyle = '#8fb8d8'; ctx.beginPath(); ctx.ellipse(q.x, q.y, q.r, q.r * 0.7, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha *= 0.8; ctx.fillStyle = '#e8f6ff'; ctx.beginPath(); ctx.ellipse(q.x - q.r * 0.3, q.y - q.r * 0.2, q.r * 0.25, q.r * 0.12, 0.4, 0, 7); ctx.fill(); ctx.restore(); }
   for (const p of puddles) {
     ctx.save(); ctx.globalAlpha = Math.min(0.55, p.t); ctx.fillStyle = p.col;
     ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * 0.8, 0.6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
